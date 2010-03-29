@@ -157,7 +157,12 @@ switch($step) {
 	$passwrd = trim($_POST['pwd']);
 	$dbhost  = trim($_POST['dbhost']);
 	$prefix  = trim($_POST['prefix']);
-	if (empty($prefix)) $prefix = 'wp_';
+	if ( empty($prefix) )
+		$prefix = 'wp_';
+
+	// Validate $prefix: it can only contain letters, numbers and underscores 
+	if ( preg_match( '|[^a-z0-9_]|i', $prefix ) ) 
+		wp_die( /*WP_I18N_BAD_PREFIX*/'<strong>ERROR</strong>: "Table Prefix" can only contain numbers, letters, and underscores.'/*/WP_I18N_BAD_PREFIX*/ ); 
 
 	// Test the db connection.
 	/**#@+
@@ -240,7 +245,7 @@ switch($step) {
 ?>
 <p>Sorry, but I can't write the <code>wp-config.php</code> file.</p>
 <p>You can create the <code>wp-config.php</code> manually and paste the following text into it.</p>
-<textarea cols="90" rows="15"><?php
+<textarea cols="98" rows="15" class="code"><?php
 		foreach( $configFile as $line ) {
 			echo htmlentities($line, ENT_COMPAT, 'UTF-8');
 		}

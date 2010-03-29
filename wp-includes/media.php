@@ -231,6 +231,34 @@ function get_image_tag($id, $alt, $title, $align, $size='medium') {
 }
 
 /**
+ * Load an image from a string, if PHP supports it.
+ *
+ * @since 2.1.0
+ *
+ * @param string $file Filename of the image to load.
+ * @return resource The resulting image resource on success, Error string on failure.
+ */
+function wp_load_image( $file ) {
+	if ( is_numeric( $file ) )
+		$file = get_attached_file( $file );
+
+	if ( ! file_exists( $file ) )
+		return sprintf(__('File &#8220;%s&#8221; doesn&#8217;t exist?'), $file);
+
+	if ( ! function_exists('imagecreatefromstring') )
+		return __('The GD image library is not installed.');
+
+	// Set artificially high because GD uses uncompressed images in memory
+	@ini_set('memory_limit', '256M');
+	$image = imagecreatefromstring( file_get_contents( $file ) );
+
+	if ( !is_resource( $image ) )
+		return sprintf(__('File &#8220;%s&#8221; is not an image.'), $file);
+
+	return $image;
+}
+
+/**
  * Calculates the new dimentions for a downsampled image.
  *
  * If either width or height are empty, no constraint is applied on
@@ -371,7 +399,7 @@ function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $de
 	imagecopyresampled( $newimage, $image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h);
 
 	// convert from full colors to index colors, like original PNG.
-	if ( IMAGETYPE_PNG == $orig_type && !imageistruecolor( $image ) )
+	if ( IMAGETYPE_PNG == $orig_type && function_exists('imageistruecolor') && !imageistruecolor( $image ) )
 		imagetruecolortopalette( $newimage, false, imagecolorstotal( $image ) );
 
 	// we don't need the original in memory anymore
