@@ -3,6 +3,8 @@
  * Multi-site WordPress API
  *
  * @package WordPress
+ * @subpackage Multisite
+ * @since 3.0.0
  */
 
 function get_sitestats() {
@@ -541,7 +543,6 @@ function wpmu_validate_user_signup($user_name, $user_email) {
 function wpmu_validate_blog_signup($blogname, $blog_title, $user = '') {
 	global $wpdb, $domain, $base, $current_site;
 
-	$blogname = preg_replace( "/\s+/", '', sanitize_user( $blogname, true ) );
 	$blog_title = strip_tags( $blog_title );
 	$blog_title = substr( $blog_title, 0, 50 );
 
@@ -674,9 +675,9 @@ function wpmu_signup_blog_notification($domain, $path, $title, $user, $user_emai
 
 	// Send email with activation link.
 	if ( !is_subdomain_install() || $current_site->id != 1 )
-		$activate_url = "http://" . $current_site->domain . $current_site->path . "wp-activate.php?key=$key";
+		$activate_url = network_site_url("wp-activate.php?key=$key");
 	else
-		$activate_url = "http://{$domain}{$path}wp-activate.php?key=$key";
+		$activate_url = "http://{$domain}{$path}wp-activate.php?key=$key"; // @todo use *_url() API
 
 	$activate_url = esc_url($activate_url);
 	$admin_email = get_site_option( "admin_email" );
@@ -841,7 +842,6 @@ function wpmu_create_blog($domain, $path, $title, $user_id, $meta = '', $site_id
 }
 
 function newblog_notify_siteadmin( $blog_id, $deprecated = '' ) {
-	global $current_site;
 	if ( get_site_option( 'registrationnotification' ) != 'yes' )
 		return false;
 
@@ -849,11 +849,11 @@ function newblog_notify_siteadmin( $blog_id, $deprecated = '' ) {
 	if ( is_email($email) == false )
 		return false;
 
-	$options_site_url = esc_url("http://{$current_site->domain}{$current_site->path}wp-admin/ms-options.php");
+	$options_site_url = esc_url(network_admin_url('ms-options.php'));
 
 	switch_to_blog( $blog_id );
 	$blogname = get_option( 'blogname' );
-	$siteurl = get_option( 'siteurl' );
+	$siteurl = site_url();
 	restore_current_blog();
 
 	$msg = sprintf( __( "New Blog: %1s
@@ -868,8 +868,6 @@ Disable these notifications: %4s"), $blogname, $siteurl, $_SERVER['REMOTE_ADDR']
 }
 
 function newuser_notify_siteadmin( $user_id ) {
-	global $current_site;
-
 	if ( get_site_option( 'registrationnotification' ) != 'yes' )
 		return false;
 
@@ -880,7 +878,7 @@ function newuser_notify_siteadmin( $user_id ) {
 
 	$user = new WP_User($user_id);
 
-	$options_site_url = esc_url("http://{$current_site->domain}{$current_site->path}wp-admin/ms-options.php");
+	$options_site_url = esc_url(network_admin_url('ms-options.php'));
 	$msg = sprintf(__("New User: %1s
 Remote IP: %2s
 
@@ -1208,31 +1206,55 @@ function fix_import_form_size( $size ) {
  * @return int An ID from the global terms table mapped from $term_id.
  */
 function global_terms( $term_id, $deprecated = '' ) {
-	global $wpdb;
+	global $wpdb, $global_terms_recurse;
 
 	if ( !global_terms_enabled() )
 		return $term_id;
+
+	// prevent a race condition
+	if ( !isset( $global_terms_recurse ) ) {
+		$recurse_start = true;
+		$global_terms_recurse = 1;
+	} elseif ( 10 < $global_terms_recurse++ ) {
+		return $term_id;
+		$recurse_start = false;
+	}
 
 	$term_id = intval( $term_id );
 	$c = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->terms WHERE term_id = %d", $term_id ) );
 
 	$global_id = $wpdb->get_var( $wpdb->prepare( "SELECT cat_ID FROM $wpdb->sitecategories WHERE category_nicename = %s", $c->slug ) );
 	if ( $global_id == null ) {
-		$wpdb->insert( $wpdb->sitecategories, array('cat_name' => $c->name, 'category_nicename' => $c->slug) );
-		$global_id = $wpdb->insert_id;
+		$used_global_id = $wpdb->get_var( $wpdb->prepare( "SELECT cat_ID FROM $wpdb->sitecategories WHERE cat_ID = %d", $c->term_id ) );
+		if ( null == $used_global_id ) {
+			$wpdb->insert( $wpdb->sitecategories, array( 'cat_ID' => $term_id, 'cat_name' => $c->name, 'category_nicename' => $c->slug ) );
+			$global_id = $wpdb->insert_id;
+		} else {
+			$max_global_id = $wpdb->get_var( "SELECT MAX(cat_ID) FROM $wpdb->sitecategories" );
+			$max_global_id += mt_rand( 100, 400 );
+			$wpdb->insert( $wpdb->sitecategories, array( 'cat_ID' => $global_id, 'cat_name' => $c->name, 'category_nicename' => $c->slug ) );
+			$global_id = $wpdb->insert_id;
+		}
+	} elseif ( $global_id != $term_id ) {
+		$local_id = $wpdb->get_row( $wpdb->prepare( "SELECT term_id FROM $wpdb->terms WHERE term_id = %d", $global_id ) );
+		if ( null != $local_id )
+			$local_id = global_terms( $local_id );
+			if ( 10 < $global_terms_recurse )
+				$global_id = $term_id;
 	}
 
-	if ( $global_id == $term_id )
-		return $global_id;
+	if ( $global_id != $term_id ) {
+		if ( get_option( 'default_category' ) == $term_id )
+			update_option( 'default_category', $global_id );
 
-	if ( get_option( 'default_category' ) == $term_id )
-		update_option( 'default_category', $global_id );
+		$wpdb->update( $wpdb->terms, array('term_id' => $global_id), array('term_id' => $term_id) );
+		$wpdb->update( $wpdb->term_taxonomy, array('term_id' => $global_id), array('term_id' => $term_id) );
+		$wpdb->update( $wpdb->term_taxonomy, array('parent' => $global_id), array('parent' => $term_id) );
 
-	$wpdb->update( $wpdb->terms, array('term_id' => $global_id), array('term_id' => $term_id) );
-	$wpdb->update( $wpdb->term_taxonomy, array('term_id' => $global_id), array('term_id' => $term_id) );
-	$wpdb->update( $wpdb->term_taxonomy, array('parent' => $global_id), array('parent' => $term_id) );
-
-	clean_term_cache($term_id);
+		clean_term_cache($term_id);
+	}
+	if( $recurse_start )
+		unset( $global_terms_recurse );
 
 	return $global_id;
 }
@@ -1278,7 +1300,7 @@ function maybe_redirect_404() {
 	global $current_site;
 	if ( is_main_site() && is_404() && defined( 'NOBLOGREDIRECT' ) && ( $destination = NOBLOGREDIRECT ) ) {
 		if ( $destination == '%siteurl%' )
-			$destination = $current_site->domain . $current_site->path;
+			$destination = network_home_url();
 		wp_redirect( $destination );
 		exit();
 	}

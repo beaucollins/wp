@@ -607,7 +607,6 @@ function populate_roles_300() {
 
 	if ( !empty( $role ) ) {
 		$role->add_cap( 'update_core' );
-		$role->add_cap( 'remove_user' );
 		$role->add_cap( 'remove_users' );
 	}
 }
@@ -724,7 +723,7 @@ Thanks!
 	$current_site->site_name = ucfirst( $domain );
 
 	if ( !is_multisite() ) {
-		$wpdb->insert( $wpdb->blogs, array( 'site_id' => $network_id, 'domain' => $domain, 'path' => $path ) );
+		$wpdb->insert( $wpdb->blogs, array( 'site_id' => $network_id, 'domain' => $domain, 'path' => $path, 'registered' => current_time( 'mysql' ) ) );
 		$blog_id = $wpdb->insert_id;
 		update_user_meta( $site_user->ID, 'source_domain', $domain );
 		update_user_meta( $site_user->ID, 'primary_blog', $blog_id );

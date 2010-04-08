@@ -128,7 +128,7 @@ switch ( $action ) {
 					$menu_item_url         = isset( $_POST['menu-item-url'][$k] )         ? $_POST['menu-item-url'][$k]         : '';
 					$menu_item_description = isset( $_POST['menu-item-description'][$k] ) ? $_POST['menu-item-description'][$k] : '';
 					$menu_item_attr_title  = isset( $_POST['menu-item-attr-title'][$k] )  ? $_POST['menu-item-attr-title'][$k]  : '';
-					$menu_item_target      = isset( $_POST['menu-item-target'][$k] )      ? $_POST['menu-item-target'][$k]      : '_self';
+					$menu_item_target      = isset( $_POST['menu-item-target'][$k] )      ? $_POST['menu-item-target'][$k]      : '';
 					$menu_item_classes     = isset( $_POST['menu-item-classes'][$k] )     ? $_POST['menu-item-classes'][$k]     : '';
 					$menu_item_xfn         = isset( $_POST['menu-item-xfn'][$k] )         ? $_POST['menu-item-xfn'][$k]         : '';
 
@@ -240,6 +240,7 @@ require_once( 'admin-header.php' );
 <div class="wrap">
 	<?php screen_icon(); ?>
 	<h2><?php esc_html_e('Menus'); ?></h2>
+	<?php /* OMGWTFBBQ */ ?><div class="error"><p><strong><?php _e('Beta Testers:') ?></strong> <?php _e('This feature is still under construction. You can try it out, but expect it to change in layout and functionality in the second beta release.'); ?></p></div>
 	<?php echo $messages_div; ?>
 	<div class="hide-if-js error"><p><?php _e('You do not have JavaScript enabled in your browser. Please enable it to access the Menus functionality.'); ?></p></div>
 
@@ -273,7 +274,7 @@ require_once( 'admin-header.php' );
 						<div id="menu-container" class="postbox">
 							<h3 class="hndle"><?php echo esc_html( $nav_menu_selected_title ); ?></h3>
 							<div class="inside">
-								<?php echo wp_get_nav_menu( array( 'context' => 'backend', 'menu' => $nav_menu_selected_id ) ); ?>
+								<?php wp_nav_menu( array( 'menu' => $nav_menu_selected_id, 'context' => 'backend' ) ); ?>
 							</div><!-- /.inside -->
 						<!-- /#nav-menu-canvas .postbox-->
 						</div>
@@ -313,7 +314,7 @@ require_once( 'admin-header.php' );
 		<label for="edit-menu-item-target">
 			<?php _e( 'Link Target' ); ?><br />
 			<select id="edit-menu-item-target" class="widefat" name="edit-menu-item-target" tabindex="4">
-				<option value="_self"><?php _e('Same window or tab'); ?></option>
+				<option value=""><?php _e('Same window or tab'); ?></option>
 				<option value="_blank"><?php _e('New window or tab'); ?></option>
 			</select>
 		</label>

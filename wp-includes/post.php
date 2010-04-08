@@ -764,6 +764,8 @@ function get_post_types( $args = array(), $output = 'names' ) {
  * exclude_from_search - Whether to exclude posts with this post type from search results. Defaults to true if the type is not public, false if the type is public.
  * publicly_queryable - Whether post_type queries can be performed from the front page.  Defaults to whatever public is set as.
  * show_ui - Whether to generate a default UI for managing this post type. Defaults to true if the type is public, false if the type is not public.
+ * menu_position - The position in the menu order the post type should appear. Defaults to the bottom.
+ * menu_icon - The url to the icon to be used for this menu. Defaults to use the posts icon.
  * inherit_type - The post type from which to inherit the edit link and capability type. Defaults to none.
  * capability_type - The post type to use for checking read, edit, and delete capabilities. Defaults to "post".
  * edit_cap - The capability that controls editing a particular object of this post type. Defaults to "edit_$capability_type" (edit_post).
@@ -792,7 +794,7 @@ function register_post_type($post_type, $args = array()) {
 		$wp_post_types = array();
 
 	// Args prefixed with an underscore are reserved for internal use.
-	$defaults = array('label' => false, 'singular_label' => false, 'description' => '', 'publicly_queryable' => null, 'exclude_from_search' => null, '_builtin' => false, '_edit_link' => 'post.php?post=%d', 'capability_type' => 'post', 'hierarchical' => false, 'public' => false, 'rewrite' => true, 'query_var' => true, 'supports' => array(), 'register_meta_box_cb' => null, 'taxonomies' => array(), 'show_ui' => null, 'permalink_epmask' => EP_NONE );
+	$defaults = array('label' => false, 'singular_label' => false, 'description' => '', 'publicly_queryable' => null, 'exclude_from_search' => null, '_builtin' => false, '_edit_link' => 'post.php?post=%d', 'capability_type' => 'post', 'hierarchical' => false, 'public' => false, 'rewrite' => true, 'query_var' => true, 'supports' => array(), 'register_meta_box_cb' => null, 'taxonomies' => array(), 'show_ui' => null, 'menu_position' => null, 'menu_icon' => null, 'permalink_epmask' => EP_NONE );
 	$args = wp_parse_args($args, $defaults);
 	$args = (object) $args;
 
@@ -877,6 +879,13 @@ function register_post_type($post_type, $args = array()) {
 
 /**
  * Register support of certain features for a post type.
+ *
+ * All features are directly associated with a functional area of the edit screen, such as the
+ * editor or a meta box: 'title', 'editor', 'comments', 'revisions', 'trackbacks', 'author',
+ * 'excerpt', 'page-attributes', 'thumbnail', and 'custom-fields'.
+ *
+ * Additionally, the 'revisions' feature dictates whether the post type will store revisions,
+ * and the 'comments' feature dicates whether the comments count will show on the edit screen.
  *
  * @since 3.0.0
  * @param string $post_type The post type for which to add the feature
@@ -1585,18 +1594,22 @@ function wp_post_mime_type_where($post_mime_types) {
 }
 
 /**
- * Removes a post, attachment, or page.
+ * Trashes or deletes a post or page.
  *
- * When the post and page goes, everything that is tied to it is deleted also.
+ * When the post and page is permanently deleted, everything that is tied to it is deleted also.
  * This includes comments, post meta fields, and terms associated with the post.
+ *
+ * The post or page is moved to trash instead of permanently deleted unless trash is
+ * disabled, item is already in the trash, or $force_delete is true.
  *
  * @since 1.0.0
  * @uses do_action() on 'delete_post' before deletion unless post type is 'attachment'.
  * @uses do_action() on 'deleted_post' after deletion unless post type is 'attachment'.
  * @uses wp_delete_attachment() if post type is 'attachment'.
+ * @uses wp_trash_post() if item should be trashed.
  *
  * @param int $postid Post ID.
- * @param bool $force_delete Whether to bypass trash and force deletion
+ * @param bool $force_delete Whether to bypass trash and force deletion. Defaults to false.
  * @return mixed False on failure
  */
 function wp_delete_post( $postid = 0, $force_delete = false ) {
@@ -1605,7 +1618,7 @@ function wp_delete_post( $postid = 0, $force_delete = false ) {
 	if ( !$post = $wpdb->get_row($wpdb->prepare("SELECT * FROM $wpdb->posts WHERE ID = %d", $postid)) )
 		return $post;
 
-	if ( !$force_delete && ( $post->post_type == 'post' || $post->post_type == 'page') && get_post_status( $postid ) != 'trash' && EMPTY_TRASH_DAYS > 0 )
+	if ( !$force_delete && ( $post->post_type == 'post' || $post->post_type == 'page') && get_post_status( $postid ) != 'trash' && EMPTY_TRASH_DAYS )
 			return wp_trash_post($postid);
 
 	if ( $post->post_type == 'attachment' )
@@ -1653,8 +1666,8 @@ function wp_delete_post( $postid = 0, $force_delete = false ) {
 	$comment_ids = $wpdb->get_col( $wpdb->prepare( "SELECT comment_ID FROM $wpdb->comments WHERE comment_post_ID = %d", $postid ));
 	if ( ! empty($comment_ids) ) {
 		do_action( 'delete_comment', $comment_ids );
-		$in_comment_ids = "'" . implode("', '", $comment_ids) . "'";
-		$wpdb->query( "DELETE FROM $wpdb->comments WHERE comment_ID IN($in_comment_ids)" );
+		foreach ( $comment_ids as $comment_id )
+			wp_delete_comment( $comment_id, true );
 		do_action( 'deleted_comment', $comment_ids );
 	}
 
@@ -1691,16 +1704,19 @@ function wp_delete_post( $postid = 0, $force_delete = false ) {
 /**
  * Moves a post or page to the Trash
  *
+ * If trash is disabled, the post or page is permanently deleted.
+ *
  * @since 2.9.0
  * @uses do_action() on 'trash_post' before trashing
  * @uses do_action() on 'trashed_post' after trashing
+ * @uses wp_delete_post() if trash is disabled
  *
  * @param int $postid Post ID.
  * @return mixed False on failure
  */
 function wp_trash_post($post_id = 0) {
-	if ( EMPTY_TRASH_DAYS == 0 )
-		return wp_delete_post($post_id);
+	if ( !EMPTY_TRASH_DAYS )
+		return wp_delete_post($post_id, true);
 
 	if ( !$post = wp_get_single_post($post_id, ARRAY_A) )
 		return $post;
@@ -2751,7 +2767,8 @@ function &get_page(&$page, $output = OBJECT, $filter = 'raw') {
  * @uses $wpdb
  *
  * @param string $page_path Page path
- * @param string $output Optional. Output type. OBJECT, ARRAY_N, or ARRAY_A.
+ * @param string $output Optional. Output type. OBJECT, ARRAY_N, or ARRAY_A. Default OBJECT.
+ * @param string $post_type Optional. Post type. Default page.
  * @return mixed Null when complete.
  */
 function get_page_by_path($page_path, $output = OBJECT, $post_type = 'page') {
@@ -2793,12 +2810,13 @@ function get_page_by_path($page_path, $output = OBJECT, $post_type = 'page') {
  * @uses $wpdb
  *
  * @param string $page_title Page title
- * @param string $output Optional. Output type. OBJECT, ARRAY_N, or ARRAY_A.
+ * @param string $output Optional. Output type. OBJECT, ARRAY_N, or ARRAY_A. Default OBJECT.
+ * @param string $post_type Optional. Post type. Default page.
  * @return mixed
  */
-function get_page_by_title($page_title, $output = OBJECT) {
+function get_page_by_title($page_title, $output = OBJECT, $post_type = 'page' ) {
 	global $wpdb;
-	$page = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type='page'", $page_title ));
+	$page = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type= %s", $page_title, $post_type ) );
 	if ( $page )
 		return get_page($page, $output);
 
@@ -3287,18 +3305,21 @@ function wp_insert_attachment($object, $file = false, $parent = 0) {
 }
 
 /**
- * Delete an attachment.
+ * Trashes or deletes an attachment.
  *
- * Will remove the file also, when the attachment is removed. Removes all post
- * meta fields, taxonomy, comments, etc associated with the attachment (except
- * the main post).
+ * When an attachment is permanently deleted, the file will also be removed.
+ * Deletion removes all post meta fields, taxonomy, comments, etc. associated
+ * with the attachment (except the main post).
+ *
+ * The attachment is moved to the trash instead of permanently deleted unless trash
+ * for media is disabled, item is already in the trash, or $force_delete is true.
  *
  * @since 2.0.0
  * @uses $wpdb
  * @uses do_action() Calls 'delete_attachment' hook on Attachment ID.
  *
  * @param int $postid Attachment ID.
- * @param bool $force_delete Whether to bypass trash and force deletion
+ * @param bool $force_delete Whether to bypass trash and force deletion. Defaults to false.
  * @return mixed False on failure. Post data on success.
  */
 function wp_delete_attachment( $post_id, $force_delete = false ) {
@@ -3331,10 +3352,10 @@ function wp_delete_attachment( $post_id, $force_delete = false ) {
 	$wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->postmeta WHERE meta_key = '_thumbnail_id' AND meta_value = %d", $post_id ));
 
 	$comment_ids = $wpdb->get_col( $wpdb->prepare( "SELECT comment_ID FROM $wpdb->comments WHERE comment_post_ID = %d", $post_id ));
-	if ( ! empty($comment_ids) ) {
+	if ( ! empty( $comment_ids ) ) {
 		do_action( 'delete_comment', $comment_ids );
-		$in_comment_ids = "'" . implode("', '", $comment_ids) . "'";
-		$wpdb->query( "DELETE FROM $wpdb->comments WHERE comment_ID IN($in_comment_ids)" );
+		foreach ( $comment_ids as $comment_id )
+			wp_delete_comment( $comment_id, true );
 		do_action( 'deleted_comment', $comment_ids );
 	}
 

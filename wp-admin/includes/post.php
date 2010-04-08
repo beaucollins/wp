@@ -241,7 +241,7 @@ function bulk_edit_posts( $post_data = null ) {
 	else
 		$ptype = get_post_type_object('post');
 
-	if ( !current_user_can( $ptype->edit_type_cap, $post_ID ) ) {
+	if ( !current_user_can( $ptype->edit_type_cap ) ) {
 		if ( 'page' == $ptype->name )
 			wp_die( __('You are not allowed to edit pages.'));
 		else
@@ -492,7 +492,7 @@ function wp_write_post() {
 	else
 		$ptype = get_post_type_object('post');
 
-	if ( !current_user_can( $ptype->edit_type_cap, $post_ID ) ) {
+	if ( !current_user_can( $ptype->edit_type_cap ) ) {
 		if ( 'page' == $ptype->name )
 			return new WP_Error( 'edit_pages', __( 'You are not allowed to create pages on this blog.' ) );
 		else
@@ -1143,7 +1143,9 @@ function get_sample_permalink_html( $id, $new_title = null, $new_slug = null ) {
  */
 function _wp_post_thumbnail_html( $thumbnail_id = NULL ) {
 	global $content_width, $_wp_additional_image_sizes;
-	$content = '<p class="hide-if-no-js"><a href="#" id="set-post-thumbnail" onclick="jQuery(\'#add_image\').click();return false;">' . esc_html__( 'Set thumbnail' ) . '</a></p>';
+
+	$set_thumbnail_link = '<p class="hide-if-no-js"><a href="' . get_upload_iframe_src('image') . '" id="set-post-thumbnail" class="thickbox">%s</a></p>';
+	$content = sprintf($set_thumbnail_link, esc_html__( 'Set featured image' ));
 
 	if ( $thumbnail_id && get_post( $thumbnail_id ) ) {
 		$old_content_width = $content_width;
@@ -1153,8 +1155,8 @@ function _wp_post_thumbnail_html( $thumbnail_id = NULL ) {
 		else
 			$thumbnail_html = wp_get_attachment_image( $thumbnail_id, 'post-thumbnail' );
 		if ( !empty( $thumbnail_html ) ) {
-			$content = '<a href="#" id="set-post-thumbnail" onclick="jQuery(\'#add_image\').click();return false;">' . $thumbnail_html . '</a>';
-			$content .= '<p class="hide-if-no-js"><a href="#" id="remove-post-thumbnail" onclick="WPRemoveThumbnail();return false;">' . esc_html__( 'Remove thumbnail' ) . '</a></p>';
+			$content = sprintf($set_thumbnail_link, $thumbnail_html);
+			$content .= '<p class="hide-if-no-js"><a href="#" id="remove-post-thumbnail" onclick="WPRemoveThumbnail();return false;">' . esc_html__( 'Remove featured image' ) . '</a></p>';
 		}
 		$content_width = $old_content_width;
 	}

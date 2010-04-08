@@ -476,7 +476,7 @@ class WP {
 
 		if ( ( 0 == count( $wp_query->posts ) ) && !is_404() && !is_robots() && !is_search() && !is_home() ) {
 			// Don't 404 for these queries if they matched an object.
-			if ( ( is_tag() || is_category() || is_tax() || is_author() ) && $wp_query->get_queried_object() ) {
+			if ( ( is_tag() || is_category() || is_tax() || is_author() ) && $wp_query->get_queried_object() && !is_paged() ) {
 				if ( !is_404() )
 					status_header( 200 );
 				return;
@@ -1178,31 +1178,32 @@ class Walker_Nav_Menu extends Walker {
 	 * @param object $item Menu item data object.
 	 * @param int $depth Depth of menu item. Used for padding.
 	 * @param int $current_page Menu item ID.
-	 * @param array $args
+	 * @param object $args
 	 */
 	function start_el(&$output, $item, $depth, $args) {
 		$indent = ( $depth ) ? str_repeat( "\t", $depth ) : '';
 
+		$classes = $value = '';
 		if ( 'frontend' == $args->context ) {
 			global $wp_query;
 
-			$css_class = array( 'menu-item', 'menu-item-type-'. $item->type, $item->classes );
+			$classes = array( 'menu-item', 'menu-item-type-'. $item->type, $item->classes );
 
 			if ( 'custom' != $item->object )
-				$css_class[] = 'menu-item-object-'. $item->object;
+				$classes[] = 'menu-item-object-'. $item->object;
 
 			if ( $item->object_id == $wp_query->get_queried_object_id() )
-				$css_class[] = 'current-menu-item';
+				$classes[] = 'current-menu-item';
 
 			// @todo add classes for parent/child relationships
 
-			$css_class = join( ' ', apply_filters('nav_menu_css_class', $css_class, $item) );
+			$classes = join( ' ', apply_filters( 'nav_menu_css_class', array_filter( $classes ), $item ) );
+			$classes = ' class="' . esc_attr( $classes ) . '"';
+		} else {
+			$value = ' value="' . $item->ID . '"';
 		}
 
-		$maybe_value = ( 'backend' == $args->context ) ? ' value="'. $item->ID .'"' : '';
-		$maybe_classes = ( 'frontend' == $args->context ) ? ' class="'. $css_class .'"' : '';
-
-		$output .= $indent . '<li id="menu-item-'. $item->ID .'"'. $maybe_value . $maybe_classes .'>' . wp_get_nav_menu_item( $item, $args->context, $args );
+		$output .= $indent . '<li id="menu-item-'. $item->ID . '"' . $value . $classes .'>' . wp_get_nav_menu_item( $item, $args->context, $args );
 	}
 
 	/**
@@ -1216,7 +1217,6 @@ class Walker_Nav_Menu extends Walker {
 	function end_el(&$output, $item, $depth) {
 		$output .= "</li>\n";
 	}
-
 }
 
 /**

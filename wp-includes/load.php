@@ -370,7 +370,7 @@ function wp_start_object_cache() {
 		wp_cache_init();
 
 	if ( function_exists( 'wp_cache_add_global_groups' ) ) {
-		wp_cache_add_global_groups( array( 'users', 'userlogins', 'usermeta', 'site-transient', 'site-options', 'site-lookup', 'blog-lookup', 'blog-details', 'rss' ) );
+		wp_cache_add_global_groups( array( 'users', 'userlogins', 'usermeta', 'site-transient', 'site-options', 'site-lookup', 'blog-lookup', 'blog-details', 'rss', 'global-posts' ) );
 		wp_cache_add_non_persistent_groups( array( 'comment', 'counts', 'plugins' ) );
 	}
 }
@@ -568,6 +568,9 @@ function is_admin() {
  * @return bool True if multisite is enabled, false otherwise.
  */
 function is_multisite() {
+	if ( defined( 'MULTISITE' ) && ! MULTISITE )
+		return false;
+
 	if ( ( defined( 'MULTISITE' ) && MULTISITE ) || defined( 'VHOST' ) || defined( 'SUNRISE' ) )
 		return true;
 

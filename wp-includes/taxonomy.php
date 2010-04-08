@@ -206,7 +206,7 @@ function is_taxonomy_hierarchical($taxonomy) {
  *
  * Optional $args contents:
  *
- * hierarachical - has some defined purpose at other parts of the API and is a
+ * hierarchical - has some defined purpose at other parts of the API and is a
  * boolean value.
  *
  * update_count_callback - works much like a hook, in that it will be called
@@ -1548,30 +1548,16 @@ function wp_insert_term( $term, $taxonomy, $args = array() ) {
 	if ( ! $term_id = is_term($slug, $taxonomy) ) {
 		// Make sure the slug is unique accross all taxonomies.
 		$slug = wp_unique_term_slug($slug, (object) $args);
-		if ( !is_multisite() ) {
-			if ( false === $wpdb->insert( $wpdb->terms, compact( 'name', 'slug', 'term_group' ) ) )
-				return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
-			$term_id = (int) $wpdb->insert_id;
-		} else {
-			$maxterm = $wpdb->get_var( "SELECT max(term_id) FROM {$wpdb->terms}" );
-			$term_id = mt_rand( $maxterm+100, $maxterm+4000 );
-			if ( false === $wpdb->insert( $wpdb->terms, compact( 'term_id', 'name', 'slug', 'term_group' ) ) )
-				return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
-		}
+		if ( false === $wpdb->insert( $wpdb->terms, compact( 'name', 'slug', 'term_group' ) ) )
+			return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
+		$term_id = (int) $wpdb->insert_id;
 	} else if ( is_taxonomy_hierarchical($taxonomy) && !empty($parent) ) {
 		// If the taxonomy supports hierarchy and the term has a parent, make the slug unique
 		// by incorporating parent slugs.
 		$slug = wp_unique_term_slug($slug, (object) $args);
-		if ( !is_multisite() ) {
-			if ( false === $wpdb->insert( $wpdb->terms, compact( 'name', 'slug', 'term_group' ) ) )
-				return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
-			$term_id = (int) $wpdb->insert_id;
-		} else {
-			$maxterm = $wpdb->get_var( "SELECT max(term_id) FROM {$wpdb->terms}" );
-			$term_id = mt_rand( $maxterm+100, $maxterm+4000 );
-			if ( false === $wpdb->insert( $wpdb->terms, compact( 'term_id','name', 'slug', 'term_group' ) ) )
-				return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
-		}
+		if ( false === $wpdb->insert( $wpdb->terms, compact( 'name', 'slug', 'term_group' ) ) )
+			return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
+		$term_id = (int) $wpdb->insert_id;
 	}
 
 	if ( empty($slug) ) {
@@ -2199,7 +2185,7 @@ function update_term_cache($terms, $taxonomy = '') {
  *	 option. That is the name of the taxonomy, immediately followed by '_children'.
  *
  * @param string $taxonomy Taxonomy Name
- * @return array Empty if $taxonomy isn't hierarachical or returns children as Term IDs.
+ * @return array Empty if $taxonomy isn't hierarchical or returns children as Term IDs.
  */
 function _get_term_hierarchy($taxonomy) {
 	if ( !is_taxonomy_hierarchical($taxonomy) )

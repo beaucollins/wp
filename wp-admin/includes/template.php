@@ -844,7 +844,7 @@ function get_hidden_columns($screen) {
  *
  * @since 2.7
  *
- * @param string $type 'post' or 'page'
+ * @param string $screen
  */
 function inline_edit_row( $screen ) {
 	global $current_user, $mode;
@@ -883,18 +883,22 @@ function inline_edit_row( $screen ) {
 
 <form method="get" action=""><table style="display: none"><tbody id="inlineedit">
 	<?php
+	$hclass = count( $hierarchical_taxonomies ) ? 'post' : 'page';
 	$bulk = 0;
 	while ( $bulk < 2 ) { ?>
 
-	<tr id="<?php echo $bulk ? 'bulk-edit' : 'inline-edit'; ?>" class="inline-edit-row inline-edit-row-<?php echo "$screen->post_type ";
-		echo $bulk ? "bulk-edit-row bulk-edit-row-$screen->post_type" : "quick-edit-row quick-edit-row-$screen->post_type";
+	<tr id="<?php echo $bulk ? 'bulk-edit' : 'inline-edit'; ?>" class="inline-edit-row inline-edit-row-<?php echo "$hclass inline-edit-$screen->post_type ";
+		echo $bulk ? "bulk-edit-row bulk-edit-row-$hclass bulk-edit-$screen->post_type" : "quick-edit-row quick-edit-row-$hclass inline-edit-$screen->post_type";
 	?>" style="display: none"><td colspan="<?php echo $col_count; ?>">
 
 	<fieldset class="inline-edit-col-left"><div class="inline-edit-col">
 		<h4><?php echo $bulk ? __( 'Bulk Edit' ) : __( 'Quick Edit' ); ?></h4>
 
 
-<?php if ( $bulk ) : ?>
+<?php
+
+if ( post_type_supports( $screen->post_type, 'title' ) ) : 
+	if ( $bulk ) : ?>
 		<div id="bulk-title-div">
 			<div id="bulk-titles"></div>
 		</div>
@@ -906,16 +910,15 @@ function inline_edit_row( $screen ) {
 			<span class="input-text-wrap"><input type="text" name="post_title" class="ptitle" value="" /></span>
 		</label>
 
-<?php endif; // $bulk ?>
-
-
-<?php if ( !$bulk ) : ?>
-
 		<label>
 			<span class="title"><?php _e( 'Slug' ); ?></span>
 			<span class="input-text-wrap"><input type="text" name="post_name" value="" /></span>
 		</label>
 
+<?php endif; // $bulk
+endif; // post_type_supports title ?>
+
+<?php if ( !$bulk ) : ?>
 		<label><span class="title"><?php _e( 'Date' ); ?></span></label>
 		<div class="inline-edit-date">
 			<?php touch_time(1, 1, 4, 1); ?>
@@ -924,6 +927,7 @@ function inline_edit_row( $screen ) {
 
 <?php endif; // $bulk
 
+	if ( post_type_supports( $screen->post_type, 'author' ) ) :
 		$authors = get_editable_user_ids( $current_user->id, true, $screen->post_type ); // TODO: ROLE SYSTEM
 		$authors_dropdown = '';
 		if ( $authors && count( $authors ) > 1 ) :
@@ -938,7 +942,11 @@ function inline_edit_row( $screen ) {
 		endif; // authors
 ?>
 
-<?php if ( !$bulk ) : echo $authors_dropdown; ?>
+<?php if ( !$bulk ) echo $authors_dropdown;
+endif; // post_type_supports author
+
+if ( !$bulk ) :
+?>
 
 		<div class="inline-edit-group">
 			<label class="alignleft">
@@ -985,7 +993,7 @@ function inline_edit_row( $screen ) {
 	<fieldset class="inline-edit-col-right"><div class="inline-edit-col">
 
 <?php
-	if ( $bulk )
+	if ( post_type_supports( $screen->post_type, 'author' ) && $bulk )
 		echo $authors_dropdown;
 ?>
 
@@ -1002,7 +1010,8 @@ function inline_edit_row( $screen ) {
 ?>
 		</label>
 
-<?php	if ( !$bulk ) : ?>
+<?php if ( post_type_supports( $screen->post_type, 'page-attributes' ) ) :
+		if ( !$bulk ) : ?>
 
 		<label>
 			<span class="title"><?php _e( 'Order' ); ?></span>
@@ -1022,7 +1031,9 @@ function inline_edit_row( $screen ) {
 			</select>
 		</label>
 
-<?php endif; // $post_type_object->hierarchical ?>
+<?php 
+	endif; // post_type_supports page-attributes
+endif; // $post_type_object->hierarchical ?>
 
 <?php if ( count($flat_taxonomies) && !$bulk ) : ?>
 
@@ -1037,9 +1048,11 @@ function inline_edit_row( $screen ) {
 
 <?php endif; // count($flat_taxonomies) && !$bulk  ?>
 
-<?php if ( $bulk ) : ?>
+<?php if ( post_type_supports( $screen->post_type, 'comments' ) || post_type_supports( $screen->post_type, 'trackbacks' ) ) :
+	if ( $bulk ) : ?>
 
 		<div class="inline-edit-group">
+	<?php if ( post_type_supports( $screen->post_type, 'comments' ) ) : ?>
 		<label class="alignleft">
 			<span class="title"><?php _e( 'Comments' ); ?></span>
 			<select name="comment_status">
@@ -1048,7 +1061,7 @@ function inline_edit_row( $screen ) {
 				<option value="closed"><?php _e('Do not allow'); ?></option>
 			</select>
 		</label>
-
+	<?php endif; if ( post_type_supports( $screen->post_type, 'trackbacks' ) ) : ?>
 		<label class="alignright">
 			<span class="title"><?php _e( 'Pings' ); ?></span>
 			<select name="ping_status">
@@ -1057,24 +1070,27 @@ function inline_edit_row( $screen ) {
 				<option value="closed"><?php _e('Do not allow'); ?></option>
 			</select>
 		</label>
+	<?php endif; ?>
 		</div>
 
 <?php else : // $bulk ?>
 
 		<div class="inline-edit-group">
+		<?php if ( post_type_supports( $screen->post_type, 'comments' ) ) : ?>
 			<label class="alignleft">
 				<input type="checkbox" name="comment_status" value="open" />
 				<span class="checkbox-title"><?php _e( 'Allow Comments' ); ?></span>
 			</label>
-
+		<?php endif; if ( post_type_supports( $screen->post_type, 'trackbacks' ) ) : ?>
 			<label class="alignleft">
 				<input type="checkbox" name="ping_status" value="open" />
 				<span class="checkbox-title"><?php _e( 'Allow Pings' ); ?></span>
 			</label>
+		<?php endif; ?>
 		</div>
 
-<?php endif; // $bulk ?>
-
+<?php endif; // $bulk
+endif; // post_type_supports comments or pings ?>
 
 		<div class="inline-edit-group">
 			<label class="inline-edit-status alignleft">
@@ -1127,7 +1143,7 @@ function inline_edit_row( $screen ) {
 	foreach ( $columns as $column_name => $column_display_name ) {
 		if ( isset( $core_columns[$column_name] ) )
 			continue;
-		do_action( $bulk ? 'bulk_edit_custom_box' : 'quick_edit_custom_box', $column_name, $type);
+		do_action( $bulk ? 'bulk_edit_custom_box' : 'quick_edit_custom_box', $column_name, $screen->post_type );
 	}
 ?>
 	<p class="submit inline-edit-save">
@@ -1809,9 +1825,13 @@ function user_row( $user_object, $style = '', $role = '', $numposts = 0 ) {
 		$edit = "<strong><a href=\"$edit_link\">$user_object->user_login</a></strong><br />";
 
 		// Set up the hover actions for this user
+		$del_cap_type = 'remove';
+		if ( !is_multisite() && current_user_can('delete_users') )
+			$del_cap_type = 'delete';
+
 		$actions = array();
 		$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
-		if ( $current_user->ID != $user_object->ID )
+		if ( $current_user->ID != $user_object->ID && current_user_can( $del_cap_type . '_user', $user_object->ID ) )
 			$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url("users.php?action=delete&amp;user=$user_object->ID", 'bulk-users') . "'>" . __('Delete') . "</a>";
 		$actions = apply_filters('user_row_actions', $actions, $user_object);
 		$action_count = count($actions);
@@ -3797,10 +3817,6 @@ function screen_icon($screen = '') {
 			$name = $screen->parent_base;
 		else
 			$name = $screen->base;
-
-		// @todo Remove this once we have a site admin icon
-		if ( 'ms-admin' == $screen->parent_base )
-			$name = 'tools';
 
 		if ( 'edit' == $name && isset($screen->post_type) && 'page' == $screen->post_type )
 			$name = 'edit-pages';

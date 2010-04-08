@@ -648,7 +648,7 @@ function get_theme_root( $stylesheet_or_template = false ) {
 function get_theme_root_uri( $stylesheet_or_template = false ) {
 	$theme_roots = get_theme_roots();
 
-	if ( $theme_roots[$stylesheet_or_template] )
+	if ( isset( $theme_roots[$stylesheet_or_template] ) && $theme_roots[$stylesheet_or_template] )
 		$theme_root_uri = content_url( $theme_roots[$stylesheet_or_template] );
 	else
 		$theme_root_uri = content_url( 'themes' );
@@ -1352,12 +1352,36 @@ function add_custom_image_header($header_callback, $admin_header_callback, $admi
  *
  * @since 3.0.0
  *
- * @param array $headers Array of headers keyed by a string id.  The ids point to arrays containing 'url', 'thumbnail_url', and 'description' keys.
+ * @param array $headers Array of headers keyed by a string id. The ids point to arrays containing 'url', 'thumbnail_url', and 'description' keys.
  */
 function register_default_headers( $headers ) {
 	global $_wp_default_headers;
 
-	$_wp_default_headers = $headers;
+	$_wp_default_headers = array_merge( (array) $_wp_default_headers, (array) $headers );
+}
+
+/**
+ * Unregister default headers.
+ *
+ * This function must be called after register_default_headers() has already added the
+ * header you want to remove.
+ *
+ * @see register_default_headers()
+ * @since 3.0.0
+ *
+ * @param string|array The header string id (key of array) to remove, or an array thereof.
+ * @return True on success, false on failure.
+ */
+function unregister_default_headers( $header ) {
+	global $_wp_default_headers;
+	if ( is_array( $header ) ) {
+		array_map( 'unregister_default_headers', $header );
+	} elseif ( isset( $_wp_default_headers[ $header ] ) ) {
+		unset( $_wp_default_headers[ $header ] );
+		return true;
+	} else {
+		return false;
+	}
 }
 
 /**
@@ -1531,7 +1555,9 @@ function add_editor_style( $stylesheet = 'editor-style.css' ) {
 /**
  * Allows a theme to register its support of a certain feature
  *
- * Must be called in the themes functions.php file to work.
+ * Must be called in the theme's functions.php file to work.
+ * If attached to a hook, it must be after_setup_theme.
+ * The init hook may be too late for some features.
  *
  * @since 2.9.0
  * @param string $feature the feature being added
@@ -1543,6 +1569,30 @@ function add_theme_support( $feature ) {
 		$_wp_theme_features[$feature] = true;
 	else
 		$_wp_theme_features[$feature] = array_slice( func_get_args(), 1 );
+}
+
+/**
+ * Allows a theme to de-register its support of a certain feature
+ *
+ * Should be called in the theme's functions.php file. Generally would
+ * be used for child themes to override support from the parent theme.
+ *
+ * @since 3.0.0
+ * @see add_theme_support()
+ * @param string $feature the feature being added
+ * @return bool Whether feature was removed.
+ */
+function remove_theme_support( $feature ) {
+	// Blacklist: for internal registrations not used directly by themes.
+	if ( in_array( $feature, array( 'custom-background', 'custom-header', 'editor-style', 'widgets' ) ) )
+		return false;
+
+	global $_wp_theme_features;
+
+	if ( ! isset( $_wp_theme_features[$feature] ) )
+		return false;
+	unset( $_wp_theme_features[$feature] );
+	return true;
 }
 
 /**

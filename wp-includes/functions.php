@@ -680,8 +680,11 @@ function delete_transient( $transient ) {
 	if ( $_wp_using_ext_object_cache ) {
 		$result = wp_cache_delete( $transient, 'transient' );
 	} else {
+		$option_timeout = '_transient_timeout_' . $transient;
 		$option = '_transient_' . $transient;
 		$result = delete_option( $option );
+		if ( $result )
+			delete_option( $option_timeout );
 	}
 
 	if ( $result )
@@ -1775,13 +1778,17 @@ function do_robots() {
 
 	do_action( 'do_robotstxt' );
 
-	if ( '0' == get_option( 'blog_public' ) ) {
-		echo "User-agent: *\n";
-		echo "Disallow: /\n";
+	$output = '';
+	$public = get_option( 'blog_public' );
+	if ( '0' ==  $public ) {
+		$output .= "User-agent: *\n";
+		$output .= "Disallow: /\n";
 	} else {
-		echo "User-agent: *\n";
-		echo "Disallow:\n";
+		$output .= "User-agent: *\n";
+		$output .= "Disallow:\n";
 	}
+
+	echo apply_filters('robots_txt', $output, $public);
 }
 
 /**
@@ -2202,7 +2209,7 @@ function wp_unique_filename( $dir, $filename, $unique_filename_callback = null )
 		$name = '';
 
 	// Increment the file number until we have a unique file to save in $dir. Use $override['unique_filename_callback'] if supplied.
-	if ( $unique_filename_callback && function_exists( $unique_filename_callback ) ) {
+	if ( $unique_filename_callback && is_callable( $unique_filename_callback ) ) {
 		$filename = $unique_filename_callback( $dir, $name );
 	} else {
 		$number = '';
@@ -2321,7 +2328,7 @@ function wp_ext2type( $ext ) {
 		'document'    => array( 'doc', 'docx', 'docm', 'dotm', 'odt',  'pages', 'pdf', 'rtf' ),
 		'spreadsheet' => array( 'numbers',     'ods',  'xls',  'xlsx', 'xlsb',  'xlsm' ),
 		'interactive' => array( 'key', 'ppt',  'pptx', 'pptm', 'odp',  'swf' ),
-		'text'        => array( 'asc', 'txt' ),
+		'text'        => array( 'asc', 'txt', 'csv' ),
 		'archive'     => array( 'bz2', 'cab',  'dmg',  'gz',   'rar',  'sea',   'sit', 'sqx', 'tar', 'tgz',  'zip' ),
 		'code'        => array( 'css', 'html', 'php',  'js' ),
 	));
@@ -2385,6 +2392,7 @@ function get_allowed_mime_types() {
 		'mov|qt' => 'video/quicktime',
 		'mpeg|mpg|mpe' => 'video/mpeg',
 		'txt|asc|c|cc|h' => 'text/plain',
+		'csv' => 'text/csv',
 		'rtx' => 'text/richtext',
 		'css' => 'text/css',
 		'htm|html' => 'text/html',
@@ -2637,19 +2645,20 @@ function _default_wp_die_handler( $message, $title = '', $args = array() ) {
 		$admin_dir = 'wp-admin/';
 
 	if ( !function_exists( 'did_action' ) || !did_action( 'admin_head' ) ) :
-	if ( !headers_sent() ){
+	if ( !headers_sent() ) {
 		status_header( $r['response'] );
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 	}
 
-	if ( empty($title) ) {
-		$title = $have_gettext? __('WordPress &rsaquo; Error') : 'WordPress &rsaquo; Error';
-	}
+	if ( empty($title) )
+		$title = $have_gettext ? __('WordPress &rsaquo; Error') : 'WordPress &rsaquo; Error';
 
 	$text_direction = 'ltr';
-	if ( isset($r['text_direction']) && $r['text_direction'] == 'rtl' ) $text_direction = 'rtl';
-	if ( ( $wp_locale ) && ( 'rtl' == $wp_locale->text_direction ) ) $text_direction = 'rtl';
+	if ( isset($r['text_direction']) && 'rtl' == $r['text_direction'] )
+		$text_direction = 'rtl';
+	elseif ( isset($wp_locale ) && 'rtl' == $wp_locale->text_direction )
+		$text_direction = 'rtl';
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <!-- Ticket #11289, IE bug fix: always pad the error page with enough characters such that it is greater than 512 bytes, even after gzip compression abcdefghijklmnopqrstuvwxyz1234567890aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz11223344556677889900abacbcbdcdcededfefegfgfhghgihihjijikjkjlklkmlmlnmnmononpopoqpqprqrqsrsrtstsubcbcdcdedefefgfabcadefbghicjkldmnoepqrfstugvwxhyz1i234j567k890laabmbccnddeoeffpgghqhiirjjksklltmmnunoovppqwqrrxsstytuuzvvw0wxx1yyz2z113223434455666777889890091abc2def3ghi4jkl5mno6pqr7stu8vwx9yz11aab2bcc3dd4ee5ff6gg7hh8ii9j0jk1kl2lmm3nnoo4p5pq6qrr7ss8tt9uuvv0wwx1x2yyzz13aba4cbcb5dcdc6dedfef8egf9gfh0ghg1ihi2hji3jik4jkj5lkl6kml7mln8mnm9ono -->
@@ -3576,8 +3585,11 @@ function delete_site_transient( $transient ) {
 	if ( $_wp_using_ext_object_cache ) {
 		$result = wp_cache_delete( $transient, 'site-transient' );
 	} else {
+		$option_timeout = '_site_transient_timeout_' . $transient;
 		$option = '_site_transient_' . $transient;
 		$result = delete_site_option( $option );
+		if ( $result )
+			delete_site_option( $option_timeout );
 	}
 	if ( $result )
 		do_action( 'deleted_site_transient', $transient );

@@ -128,7 +128,7 @@ if ( isset($_GET['doaction']) || isset($_GET['doaction2']) || isset($_GET['delet
 	}
 
 	if ( isset($_GET['action']) )
-		$sendback = remove_query_arg( array('action', 'action2', 'cat', 'tags_input', 'post_author', 'comment_status', 'ping_status', '_status',  'post', 'bulk_edit', 'post_view'), $sendback );
+		$sendback = remove_query_arg( array('action', 'action2', 'tags_input', 'post_author', 'comment_status', 'ping_status', '_status',  'post', 'bulk_edit', 'post_view'), $sendback );
 
 	wp_redirect($sendback);
 	exit();
@@ -143,7 +143,7 @@ wp_enqueue_script('inline-edit-post');
 
 $user_posts = false;
 if ( !current_user_can($post_type_object->edit_others_cap) ) {
-	$user_posts_count = $wpdb->get_var( $wpdb->prepare("SELECT COUNT(1) FROM $wpdb->posts WHERE post_type = '%s' AND post_status != 'trash' AND post_author = %d", $post_type, $current_user->ID) );
+	$user_posts_count = $wpdb->get_var( $wpdb->prepare("SELECT COUNT(1) FROM $wpdb->posts WHERE post_type = '%s' AND post_status NOT IN ('trash', 'auto-draft') AND post_author = %d", $post_type, $current_user->ID) );
 	$user_posts = true;
 	if ( $user_posts_count && empty($_GET['post_status']) && empty($_GET['all_posts']) && empty($_GET['author']) )
 		$_GET['author'] = $current_user->ID;
@@ -167,7 +167,7 @@ else
 <?php screen_icon(); ?>
 <h2><?php echo esc_html( $title ); ?> <a href="<?php echo $post_new_file ?>" class="button add-new-h2"><?php echo esc_html_x('Add New', 'post'); ?></a> <?php
 if ( isset($_GET['s']) && $_GET['s'] )
-	printf( '<span class="subtitle">' . __('Search results for &#8220;%s&#8221;') . '</span>', esc_html( get_search_query() ) ); ?>
+	printf( '<span class="subtitle">' . __('Search results for &#8220;%s&#8221;') . '</span>', get_search_query() ); ?>
 </h2>
 
 <?php
@@ -226,7 +226,7 @@ $allposts = '';
 if ( $user_posts ) {
 	if ( isset( $_GET['author'] ) && ( $_GET['author'] == $current_user->ID ) )
 		$class = ' class="current"';
-	$status_links[] = "<li><a href='edit.php?author=$current_user->ID'$class>" . sprintf( _nx( 'Mine <span class="count">(%s)</span>', 'Mine <span class="count">(%s)</span>', $user_posts_count, 'posts' ), number_format_i18n( $user_posts_count ) ) . '</a>';
+	$status_links[] = "<li><a href='edit.php?post_type=$post_type&author=$current_user->ID'$class>" . sprintf( _nx( 'Mine <span class="count">(%s)</span>', 'Mine <span class="count">(%s)</span>', $user_posts_count, 'posts' ), number_format_i18n( $user_posts_count ) ) . '</a>';
 	$allposts = '&all_posts=1';
 }
 
@@ -262,9 +262,9 @@ endif;
 </ul>
 
 <p class="search-box">
-	<label class="screen-reader-text" for="post-search-input"><?php _e( 'Search Posts' ); ?>:</label>
+	<label class="screen-reader-text" for="post-search-input"><?php printf( __( 'Search %s' ), $post_type_object->label ); ?>:</label>
 	<input type="text" id="post-search-input" name="s" value="<?php the_search_query(); ?>" />
-	<input type="submit" value="<?php esc_attr_e( 'Search Posts' ); ?>" class="button" />
+	<input type="submit" value="<?php echo esc_attr( sprintf( __( 'Search %s' ), $post_type_object->label ) ); ?>" class="button" />
 </p>
 
 <input type="hidden" name="post_status" class="post_status_page" value="<?php echo !empty($_GET['post_status']) ? esc_attr($_GET['post_status']) : 'all'; ?>" />
@@ -410,9 +410,9 @@ if ( $page_links )
 <div class="clear"></div>
 <p><?php
 if ( isset($_GET['post_status']) && 'trash' == $_GET['post_status'] )
-	_e( 'No posts found in the Trash.' );
+	printf( __( 'No %s found in the Trash.' ), $post_type_object->label );
 else
-	_e( 'No posts found.' );
+	printf( __( 'No %s found.' ), $post_type_object->label );
 ?></p>
 <?php } ?>
 

@@ -577,7 +577,7 @@ input.readonly, textarea.readonly {
 }
 
 #footer {
-	background: url(../images/admin-header-footer.png) top left repeat-x;
+	background: #eee;
 	border-color: #d4d4d4;
 	color: #777;
 }
@@ -703,10 +703,6 @@ table.widefat span.spam a,
 
 #wphead {
 	background: url(../images/admin-header-footer.png) top left repeat-x;
-}
-
-body.login {
-	background: url(../images/login-header.png) top left repeat-x;
 }
 
 #wphead h1 a {
@@ -1239,6 +1235,15 @@ table.widefat .spam a:hover,
 #adminmenu .menu-icon-settings.wp-has-current-submenu div.wp-menu-image {
 	background: transparent url('../images/menu.png') no-repeat scroll -241px -1px;
 }
+
+#adminmenu .menu-icon-site div.wp-menu-image {
+	background: transparent url('../images/menu.png') no-repeat scroll -361px -33px;
+}
+
+#adminmenu .menu-icon-site:hover div.wp-menu-image,
+#adminmenu .menu-icon-site.wp-has-current-submenu div.wp-menu-image {
+	background: transparent url('../images/menu.png') no-repeat scroll -361px -1px;
+}
 /* end menu */
 
 
@@ -1478,12 +1483,12 @@ fieldset.inline-edit-col-right .inline-edit-col {
 }
 
 #favorite-first {
-	border-color: #cfcfcf;
-	background-color: #fff;
+	border-color: #ccc;
+	background: url(../images/fav-top.png) top left repeat-x;
 }
 
 #favorite-inside {
-	border-color: #cfcfcf;
+	border-color: #ccc;
 	background-color: #fff;
 }
 
@@ -1492,11 +1497,11 @@ fieldset.inline-edit-col-right .inline-edit-col {
 }
 
 #favorite-actions a {
-	color: #6d6d6d;
+	color: #464646;
 }
 
 #favorite-actions a:hover {
-	color: #464646;
+	color: #000;
 }
 
 #favorite-inside a:hover {
@@ -1557,6 +1562,10 @@ fieldset.inline-edit-col-right .inline-edit-col {
 
 #icon-options-general {
 	background: transparent url(../images/icons32.png) no-repeat -492px -5px;
+}
+
+#icon-ms-admin {
+	background: transparent url(../images/icons32.png) no-repeat -659px -5px;
 }
 
 .view-switch #view-switch-list {
@@ -1633,7 +1642,7 @@ div.widgets-sortables,
 }
 
 #widgets-right .sidebar-name-arrow {
-	background: transparent url(../images/fav-arrow.gif) no-repeat scroll 0 -1px;
+	background: transparent url(../images/widgets-arrow.gif) no-repeat scroll 0 -1px;
 }
 
 .in-widget-title {

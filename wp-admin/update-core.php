@@ -131,7 +131,7 @@ function core_upgrade_preamble() {
 		echo '</h3>';
 	} else {
 		echo '<div class="updated"><p>';
-		_e('<strong>Important:</strong> before updating, please <a href="http://codex.wordpress.org/WordPress_Backups">backup your database and files</a>.');
+		_e('<strong>Important:</strong> before updating, please <a href="http://codex.wordpress.org/WordPress_Backups">backup your database and files</a>. For help with updates, visit the <a href="http://codex.wordpress.org/Updating_WordPress">Updating WordPress Codex page</a>.');
 		echo '</p></div>';
 
 		echo '<h3 class="response">';
@@ -245,7 +245,7 @@ function list_theme_updates() {
 ?>
 <h3><?php _e('Themes'); ?></h3>
 <p><?php _e('The following themes have new versions available. Check the ones you want to update and then click "Update Themes".'); ?></p>
-<p><?php printf( __('<strong>Please Note:</strong> Any customizations you have made to the Themes files will be lost. Please consider using <a href="%s">Child Themes</a> for modifications.'), 'http://codex.wordpress.org/Theme_Development#Child_Themes_style.css' ); ?></p>
+<p><?php printf( __('<strong>Please Note:</strong> Any customizations you have made to the Themes files will be lost. Please consider using <a href="%s">child themes</a> for modifications.'), _x('http://codex.wordpress.org/Child_Themes', 'Link used in suggestion to use child themes in GUU') ); ?></p>
 <form method="post" action="<?php echo $form_action; ?>" name="upgrade-themes" class="upgrade">
 <?php wp_nonce_field('upgrade-core'); ?>
 <p><input id="upgrade-themes" class="button" type="submit" value="<?php esc_attr_e('Update Themes'); ?>" name="upgrade" /></p>

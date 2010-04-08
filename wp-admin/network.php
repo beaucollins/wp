@@ -37,6 +37,19 @@ function network_domain_check() {
 }
 
 /**
+ * Allow subdomain install
+ *
+ * @since 3.0.0
+ * @return bool - whether subdomain install is allowed
+ */
+function allow_subdomain_install() {
+	$domain = preg_replace( '|https?://[^/]|', '', get_option( 'siteurl' ) );
+	if( false !== strpos( $domain, '/' ) || 'localhost' == $_SERVER[ 'HTTP_HOST' ] )
+		return false;
+
+	return true;
+}
+/**
  * Get base domain of network.
  *
  * @since 3.0.0
@@ -77,6 +90,12 @@ include( './admin-header.php' );
  * @since 3.0.0
  */
 function network_step1( $errors = false ) {
+
+	if ( get_option( 'siteurl' ) != get_option( 'home' ) ) {
+		echo '<div class="error"><p><strong>' . __('Error:') . '</strong> ' . sprintf( __( 'Your <strong>WordPress address</strong> must match your <strong>Site address</strong> before creating a Network. See <a href="%s">General Settings</a>.' ), esc_url( admin_url( 'options-general.php' ) ) ) . '</strong></p></div>';
+		include ('./admin-footer.php' );
+		die();
+	}
 
 	$active_plugins = get_option( 'active_plugins' );
 	if ( ! empty( $active_plugins ) ) {
@@ -131,7 +150,7 @@ function network_step1( $errors = false ) {
 		echo '<p>' . __( 'If <code>mod_rewrite</code> is disabled, ask your administrator to enable that module, or look at the <a href="http://httpd.apache.org/docs/mod/mod_rewrite.html">Apache documentation</a> or <a href="http://www.google.com/search?q=apache+mod_rewrite">elsewhere</a> for help setting it up.' ) . '</p></div>';
 	}
 
-	if ( 'localhost' != $hostname ) : ?>
+	if ( allow_subdomain_install() ) : ?>
 		<h3><?php esc_html_e( 'Addresses of Sites in your Network' ); ?></h3>
 		<p><?php _e( 'Please choose whether you would like sites in your WordPress network to use sub-domains or sub-directories. <strong>You cannot change this later.</strong>' ); ?></p>
 		<p><?php _e( "You will need a wildcard DNS record if you're going to use the virtual host (sub-domain) functionality." ); ?></p>
@@ -171,6 +190,11 @@ function network_step1( $errors = false ) {
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Sub-directory Install' ); ?></th>
 				<td><?php _e('Because you are using <code>localhost</code>, the sites in your WordPress network must use sub-directories. Consider using <code>localhost.localdomain</code> if you wish to use sub-domains.'); ?></td>
+			</tr>
+		<?php elseif ( !allow_subdomain_install() ) : ?>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Sub-directory Install' ); ?></th>
+				<td><?php _e('Because your install is in a directory, the sites in your WordPress network must use sub-directories.'); ?></td>
 			</tr>
 		<?php endif; ?>
 		<?php if ( ! $is_www ) : ?>
@@ -214,7 +238,7 @@ function network_step2( $errors = false ) {
 		echo '<div class="error">' . $errors->get_error_message() . '</div>';
 
 	if ( $_POST ) {
-		$vhost = 'localhost' == $hostname ? false : (bool) $_POST['subdomain_install'];
+		$vhost = !allow_subdomain_install() ? false : (bool) $_POST['subdomain_install'];
 	} else {
 		if ( is_multisite() ) {
 			$vhost = is_subdomain_install();
@@ -239,7 +263,7 @@ function network_step2( $errors = false ) {
 ?>
 		<ol>
 			<li><p><?php printf( __( 'Create a <code>blogs.dir</code> directory in <code>%s</code>. This directory is used to stored uploaded media for your additional sites and must be writeable by the web server.' ), WP_CONTENT_DIR ); ?></p></li>
-			<li><p><?php printf( __( 'Add the following to your <code>wp-config.php</code> file in <code>%s</code>:' ), ABSPATH ); ?></p>
+			<li><p><?php printf( __( 'Add the following to your <code>wp-config.php</code> file in <code>%s</code> <strong>above</strong> the line reading <code>/* That&#8217;s all, stop editing! Happy blogging. */</code>:' ), ABSPATH ); ?></p>
 				<textarea class="code" readonly="readonly" cols="100" rows="7">
 define( 'MULTISITE', true );
 define( 'VHOST', '<?php echo $vhost ? 'yes' : 'no'; ?>' );
@@ -323,7 +347,7 @@ if ( $_POST ) {
 	// create network tables
 	install_network();
 	$hostname = get_clean_basedomain();
-	$subdomain_install = 'localhost' == $hostname ? false : (bool) $_POST['subdomain_install'];
+	$subdomain_install = !allow_subdomain_install() ? false : (bool) $_POST['subdomain_install'];
 	if ( ! network_domain_check() ) {
 		$result = populate_network( 1, get_clean_basedomain(), sanitize_email( $_POST['email'] ), $_POST['sitename'], $base, $subdomain_install );
 		if ( is_wp_error( $result ) ) {

@@ -736,33 +736,6 @@ function trackback_url( $deprecated_echo = true ) {
 }
 
 /**
- * Generates and displays the RDF for the trackback information of current post.
- *
- * @since 0.71
- *
- * @param int $deprecated Not used (Was $timezone = 0)
- */
-function trackback_rdf($deprecated = '') {
-	if ( !empty( $deprecated ) )
-		_deprecated_argument( __FUNCTION__, '2.5' );
-
-	if (stripos($_SERVER['HTTP_USER_AGENT'], 'W3C_Validator') === false) {
-		echo '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-				xmlns:dc="http://purl.org/dc/elements/1.1/"
-				xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">
-			<rdf:Description rdf:about="';
-		the_permalink();
-		echo '"'."\n";
-		echo '    dc:identifier="';
-		the_permalink();
-		echo '"'."\n";
-		echo '    dc:title="'.str_replace('--', '&#x2d;&#x2d;', wptexturize(strip_tags(get_the_title()))).'"'."\n";
-		echo '    trackback:ping="'.get_trackback_url().'"'." />\n";
-		echo '</rdf:RDF>';
-	}
-}
-
-/**
  * Whether the current post is open for comments.
  *
  * @since 1.5.0
@@ -1264,6 +1237,45 @@ class Walker_Comment extends Walker {
 				echo "</ul>\n";
 				break;
 		}
+	}
+
+	/**
+	 * This function is designed to enhance Walker::display_element() to
+	 * display children of higher nesting levels than selected inline on
+	 * the highest depth level displayed. This prevents them being orphaned
+	 * at the end of the comment list.
+	 * 
+	 * Example: max_depth = 2, with 5 levels of nested content.
+	 * 1
+	 *  1.1
+	 *    1.1.1
+	 *    1.1.1.1
+	 *    1.1.1.1.1
+	 *    1.1.2
+	 *    1.1.2.1
+	 * 2
+	 *  2.2
+	 *
+	 */
+	function display_element( $element, &$children_elements, $max_depth, $depth=0, $args, &$output ) {
+
+		if ( !$element )
+			return;
+
+		$id_field = $this->db_fields['id'];
+		$id = $element->$id_field;
+
+		parent::display_element( $element, $children_elements, $max_depth, $depth, $args, $output );
+
+		// If we're at the max depth, and the current element still has children, loop over those and display them at this level
+		// This is to prevent them being orphaned to the end of the list.
+		if ( $max_depth <= $depth + 1 && isset( $children_elements[$id]) ) {
+			foreach ( $children_elements[ $id ] as $child )
+				$this->display_element( $child, $children_elements, $max_depth, $depth, $args, $output );
+
+			unset( $children_elements[ $id ] );
+		}
+
 	}
 
 	/**

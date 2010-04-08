@@ -686,7 +686,7 @@ function get_search_link( $query = '' ) {
 	global $wp_rewrite;
 
 	if ( empty($query) )
-		$search = get_search_query();
+		$search = get_search_query( false );
 	else
 		$search = stripslashes($query);
 
@@ -1095,6 +1095,19 @@ function adjacent_posts_rel_link($title = '%title', $in_same_cat = false, $exclu
 }
 
 /**
+ * Display relational links for the posts adjacent to the current post for single post pages.
+ *
+ * This is meant to be attached to actions like 'wp_head'.  Do not call this directly in plugins or theme templates.
+ * @since 3.0.0
+ *
+ */
+function adjacent_posts_rel_link_wp_head() {
+	if ( !is_singular() || is_attachment() )
+		return;
+	adjacent_posts_rel_link();
+}
+
+/**
  * Display relational link for the next post adjacent to the current post.
  *
  * @since 2.8.0
@@ -1459,9 +1472,8 @@ function next_posts( $max_page = 0, $echo = true ) {
 function get_next_posts_link( $label = 'Next Page &raquo;', $max_page = 0 ) {
 	global $paged, $wp_query;
 
-	if ( !$max_page ) {
+	if ( !$max_page )
 		$max_page = $wp_query->max_num_pages;
-	}
 
 	if ( !$paged )
 		$paged = 1;
@@ -1470,7 +1482,7 @@ function get_next_posts_link( $label = 'Next Page &raquo;', $max_page = 0 ) {
 
 	if ( !is_single() && ( empty($paged) || $nextpage <= $max_page) ) {
 		$attr = apply_filters( 'next_posts_link_attributes', '' );
-		return '<a href="' . next_posts( $max_page, false ) . "\" $attr>". preg_replace('/&([^#])(?![a-z]{1,8};)/', '&#038;$1', $label) .'</a>';
+		return '<a href="' . next_posts( $max_page, false ) . "\" $attr>" . preg_replace('/&([^#])(?![a-z]{1,8};)/i', '&#038;$1', $label) . '</a>';
 	}
 }
 
@@ -1585,7 +1597,7 @@ function get_posts_nav_link( $args = array() ) {
 
 		if ( $max_num_pages > 1 ) {
 			$return = get_previous_posts_link($args['prelabel']);
-			$return .= preg_replace('/&([^#])(?![a-z]{1,8};)/', '&#038;$1', $args['sep']);
+			$return .= preg_replace('/&([^#])(?![a-z]{1,8};)/i', '&#038;$1', $args['sep']);
 			$return .= get_next_posts_link($args['nxtlabel']);
 		}
 	}
@@ -1674,7 +1686,7 @@ function get_next_comments_link( $label = '', $max_page = 0 ) {
 	if ( empty($label) )
 		$label = __('Newer Comments &raquo;');
 
-	return '<a href="' . esc_url( get_comments_pagenum_link( $nextpage, $max_page ) ) . '" ' . apply_filters( 'next_comments_link_attributes', '' ) . '>'. preg_replace('/&([^#])(?![a-z]{1,8};)/', '&#038;$1', $label) .'</a>';
+	return '<a href="' . esc_url( get_comments_pagenum_link( $nextpage, $max_page ) ) . '" ' . apply_filters( 'next_comments_link_attributes', '' ) . '>'. preg_replace('/&([^#])(?![a-z]{1,8};)/i', '&#038;$1', $label) .'</a>';
 }
 
 /**
@@ -1711,7 +1723,7 @@ function get_previous_comments_link( $label = '' ) {
 	if ( empty($label) )
 		$label = __('&laquo; Older Comments');
 
-	return '<a href="' . esc_url( get_comments_pagenum_link( $prevpage ) ) . '" ' . apply_filters( 'previous_comments_link_attributes', '' ) . '>' . preg_replace('/&([^#])(?![a-z]{1,8};)/', '&#038;$1', $label) .'</a>';
+	return '<a href="' . esc_url( get_comments_pagenum_link( $prevpage ) ) . '" ' . apply_filters( 'previous_comments_link_attributes', '' ) . '>' . preg_replace('/&([^#])(?![a-z]{1,8};)/i', '&#038;$1', $label) .'</a>';
 }
 
 /**
@@ -1831,7 +1843,9 @@ function home_url( $path = '', $scheme = null ) {
 */
 function get_home_url( $blog_id = null, $path = '', $scheme = null ) {
 	$orig_scheme = $scheme;
-	$scheme      = is_ssl() && !is_admin() ? 'https' : 'http';
+
+	if ( !in_array($scheme, array('http', 'https')) )
+		$scheme = is_ssl() && !is_admin() ? 'https' : 'http';
 
 	if ( empty($blog_id) || !is_multisite() )
 		$home = get_option('home');
@@ -2017,6 +2031,102 @@ function plugins_url($path = '', $plugin = '') {
 		$url .= '/' . ltrim($path, '/');
 
 	return apply_filters('plugins_url', $url, $path, $plugin);
+}
+
+/**
+ * Retrieve the site url for the current network.
+ *
+ * Returns the site url with the appropriate protocol,  'https' if
+ * is_ssl() and 'http' otherwise. If $scheme is 'http' or 'https', is_ssl() is
+ * overridden.
+ *
+ * @package WordPress
+ * @since 3.0.0
+ *
+ * @param string $path Optional. Path relative to the site url.
+ * @param string $scheme Optional. Scheme to give the site url context. Currently 'http','https', 'login', 'login_post', or 'admin'.
+ * @return string Site url link with optional path appended.
+*/
+function network_site_url( $path = '', $scheme = null ) {
+	global $current_site;
+
+	if ( !is_multisite() )
+		return site_url($path, $scheme);
+
+	$orig_scheme = $scheme;
+	if ( !in_array($scheme, array('http', 'https')) ) {
+		if ( ( 'login_post' == $scheme || 'rpc' == $scheme ) && ( force_ssl_login() || force_ssl_admin() ) )
+			$scheme = 'https';
+		elseif ( ('login' == $scheme) && ( force_ssl_admin() ) )
+			$scheme = 'https';
+		elseif ( ('admin' == $scheme) && force_ssl_admin() )
+			$scheme = 'https';
+		else
+			$scheme = ( is_ssl() ? 'https' : 'http' );
+	}
+
+	$url = 'http://' . $current_site->domain . $current_site->path;
+
+	$url = str_replace( 'http://', "{$scheme}://", $url );
+
+	if ( !empty($path) && is_string($path) && strpos($path, '..') === false )
+		$url .= ltrim($path, '/');
+
+	return apply_filters('network_site_url', $url, $path, $orig_scheme);
+}
+
+/**
+ * Retrieve the home url for the current network.
+ *
+ * Returns the home url with the appropriate protocol,  'https' if
+ * is_ssl() and 'http' otherwise. If $scheme is 'http' or 'https', is_ssl() is
+ * overridden.
+ *
+ * @package WordPress
+ * @since 3.0.0
+ *
+ * @param  string $path   (optional) Path relative to the home url.
+ * @param  string $scheme (optional) Scheme to give the home url context. Currently 'http','https'
+ * @return string Home url link with optional path appended.
+*/
+function network_home_url( $path = '', $scheme = null ) {
+	global $current_site;
+
+	if ( !is_multisite() )
+		return home_url($path, $scheme);
+
+	$orig_scheme = $scheme;
+
+	if ( !in_array($scheme, array('http', 'https')) )
+		$scheme = is_ssl() && !is_admin() ? 'https' : 'http';
+
+	$url = 'http://' . $current_site->domain . $current_site->path;
+
+	$url = str_replace( 'http://', "$scheme://", $url );
+
+	if ( !empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
+		$url .= ltrim( $path, '/' );
+
+	return apply_filters( 'network_home_url', $url, $path, $orig_scheme);
+}
+
+/**
+ * Retrieve the url to the admin area for the network.
+ *
+ * @package WordPress
+ * @since 3.0.0
+ *
+ * @param string $path Optional path relative to the admin url
+ * @param string $scheme The scheme to use. Default is 'admin', which obeys force_ssl_admin() and is_ssl(). 'http' or 'https' can be passed to force those schemes.
+ * @return string Admin url link with optional path appended
+*/
+function network_admin_url( $path = '', $scheme = 'admin' ) {
+	$url = network_site_url('wp-admin/', $scheme);
+
+	if ( !empty($path) && is_string($path) && strpos($path, '..') === false )
+		$url .= ltrim($path, '/');
+
+	return apply_filters('network_admin_url', $url, $path);
 }
 
 /**

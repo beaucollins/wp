@@ -30,7 +30,7 @@ function add_user() {
 			if ( $user_id != $current_user->id || $wp_roles->role_objects[$new_role]->has_cap( 'edit_users' ) ) {
 				// If the new role isn't editable by the logged-in user die with error
 				$editable_roles = get_editable_roles();
-				if ( !$editable_roles[$new_role] )
+				if ( empty( $editable_roles[$new_role] ) )
 					wp_die(__('You can&#8217;t give users that role.'));
 
 				$user = new WP_User( $user_id );
@@ -78,12 +78,13 @@ function edit_user( $user_id = 0 ) {
 		$new_role = sanitize_text_field( $_POST['role'] );
 		$potential_role = isset($wp_roles->role_objects[$new_role]) ? $wp_roles->role_objects[$new_role] : false;
 		// Don't let anyone with 'edit_users' (admins) edit their own role to something without it.
-		if ( $user_id != $current_user->id || ($potential_role && $potential_role->has_cap( 'edit_users' ) ) )
+		// Multisite super admins can freely edit their blog roles -- they possess all caps.
+		if ( ( is_multisite() && current_user_can( 'manage_sites' ) ) || $user_id != $current_user->id || ($potential_role && $potential_role->has_cap( 'edit_users' ) ) )
 			$user->role = $new_role;
 
 		// If the new role isn't editable by the logged-in user die with error
 		$editable_roles = get_editable_roles();
-		if ( !$editable_roles[$new_role] )
+		if ( ! empty( $new_role ) && empty( $editable_roles[$new_role] ) )
 			wp_die(__('You can&#8217;t give users that role.'));
 	}
 
@@ -249,7 +250,7 @@ function get_editable_user_ids( $user_id, $exclude_zeros = true, $post_type = 'p
 	$post_type_obj = get_post_type_object($post_type);
 
 	if ( ! $user->has_cap($post_type_obj->edit_others_cap) ) {
-		if ( $user->has_cap($post_type_obj->edit_cap) || $exclude_zeros == false )
+		if ( $user->has_cap($post_type_obj->edit_type_cap) || ! $exclude_zeros )
 			return array($user->id);
 		else
 			return array();
@@ -687,7 +688,7 @@ class WP_User_Search {
 			$this->query_from .= " INNER JOIN $wpdb->usermeta ON $wpdb->users.ID = $wpdb->usermeta.user_id";
 			$this->query_where .= $wpdb->prepare(" AND $wpdb->usermeta.meta_key = '{$wpdb->prefix}capabilities' AND $wpdb->usermeta.meta_value LIKE %s", '%' . $this->role . '%');
 		} elseif ( is_multisite() ) {
-			$level_key = $wpdb->get_blog_prefix() . 'capabilities'; // wpmu site admins don't have user_levels
+			$level_key = $wpdb->prefix . 'capabilities'; // wpmu site admins don't have user_levels
 			$this->query_from .= ", $wpdb->usermeta";
 			$this->query_where .= " AND $wpdb->users.ID = $wpdb->usermeta.user_id AND meta_key = '{$level_key}'";
 		}

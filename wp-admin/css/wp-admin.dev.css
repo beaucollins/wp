@@ -1254,7 +1254,7 @@ strong .post-com-count {
 
 /* Admin Footer */
 #footer {
-	margin-top: -45px;
+	margin-top: -46px;
 	border-top: 1px;
 	border-style: solid;
 }
@@ -1765,6 +1765,7 @@ div.inside {
 }
 
 #titlediv {
+	position: relative;
 	margin-bottom: 20px;
 }
 #titlediv label { cursor: text; }
@@ -1790,6 +1791,13 @@ div.inside {
 	font-size: 1.7em;
 	width: 100%;
 	outline: none;
+}
+
+#titlediv #title-prompt-text {
+	color: #bbb;
+	position: absolute;
+	font-size: 1.7em;
+	padding: 8px;
 }
 
 #poststuff .inside-submitbox,
@@ -2012,6 +2020,9 @@ input#link_url {
 	margin: 0;
 }
 
+#front-page-warning,
+#front-static-pages ul,
+.inline-editor ul.cat-checklist ul,
 .categorydiv ul.categorychecklist ul,
 #linkcategorydiv ul.categorychecklist ul {
 	margin-left: 18px;
@@ -3075,7 +3086,7 @@ button.dismiss {
 
 #favorite-inside {
 	margin: 0 0 0 0px;
-	padding: 0 1px 6px 1px;
+	padding: 2px 1px;
 	border-width: 1px;
 	border-style: solid;
 	position: absolute;

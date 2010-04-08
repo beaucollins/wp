@@ -698,8 +698,8 @@ class WP_User {
 	function remove_all_caps() {
 		global $wpdb;
 		$this->caps = array();
-		update_user_meta( $this->ID, $this->cap_key, '' );
-		update_user_meta( $this->ID, $wpdb->prefix . 'user_level', '' );
+		delete_user_meta( $this->ID, $this->cap_key );
+		delete_user_meta( $this->ID, $wpdb->prefix . 'user_level' );
 		$this->get_role_caps();
 	}
 
@@ -796,6 +796,9 @@ function map_meta_cap( $cap, $user_id ) {
 	$caps = array();
 
 	switch ( $cap ) {
+	case 'remove_user':
+		$caps[] = 'remove_users';
+		break;
 	case 'delete_user':
 		$caps[] = 'delete_users';
 		break;
