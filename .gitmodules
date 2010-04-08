@@ -1,0 +1,3 @@
+[submodule "wp-content/themes/jl"]
+	path = wp-content/themes/jl
+	url = git@github.com:beaucollins/jl.git
