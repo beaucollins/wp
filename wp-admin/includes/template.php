@@ -63,7 +63,7 @@ function inline_edit_term_row($type, $taxonomy) {
 
 	<p class="inline-edit-save submit">
 		<a accesskey="c" href="#inline-edit" title="<?php _e('Cancel'); ?>" class="cancel button-secondary alignleft"><?php _e('Cancel'); ?></a>
-		<?php $update_text = ( 'post_tag' == $taxonomy ) ? __( 'Update Tag' ) : __( 'Update Category' ); ?>
+		<?php $update_text = sprintf( __('Update %s'), $tax->singular_label ); ?>
 		<a accesskey="s" href="#inline-edit" title="<?php echo esc_attr( $update_text ); ?>" class="save button-primary alignright"><?php echo $update_text; ?></a>
 		<img class="waiting" style="display:none;" src="<?php echo esc_url( admin_url( 'images/wpspin_light.gif' ) ); ?>" alt="" />
 		<span class="error" style="display:none;"></span>
@@ -2967,12 +2967,11 @@ function get_hidden_meta_boxes($screen) {
 	if ( is_string($screen) )
 		$screen = convert_to_screen($screen);
 
-	$hidden = (array) get_user_option( "meta-box-hidden_$screen->id" );
+	$hidden = get_user_option( "meta-box-hidden_$screen->id" );
 
 	// Hide slug boxes by default
-	if ( empty($hidden[0]) ) {
+	if ( !is_array($hidden) )
 		$hidden = array('slugdiv');
-	}
 
 	return $hidden;
 }
@@ -3235,7 +3234,7 @@ function settings_errors ( $setting = '', $sanitize = FALSE, $hide_on_update = F
 	$output = '';
 	foreach ( $settings_errors as $key => $details ) {
 		$css_id = 'setting-error-' . $details['code'];
-		$css_class = $details['type'] . ' fade settings-error';
+		$css_class = $details['type'] . ' settings-error';
 		$output .= "<div id='$css_id' class='$css_class'> \n";
 		$output .= "<p><strong>{$details['message']}</strong></p>";
 		$output .= "</div> \n";

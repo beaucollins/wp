@@ -673,8 +673,10 @@ function admin_notice_feed() {
 	if ( $current_screen->id != 'dashboard' )
 		return;
 
-	if ( !empty( $_GET['feed_dismiss'] ) )
+	if ( !empty( $_GET['feed_dismiss'] ) ) {
 		update_user_option( $current_user->id, 'admin_feed_dismiss', $_GET['feed_dismiss'], true );
+		return;
+	}
 
 	$url = get_site_option( 'admin_notice_feed' );
 	if ( empty( $url ) )
@@ -690,7 +692,7 @@ function admin_notice_feed() {
 		$content = $content ? wp_html_excerpt( $content, 200 ) . ' &hellip; ' : '';
 		$link = esc_url( strip_tags( $item->get_link() ) );
 		$msg .= "<p>" . $content . "<a href='$link'>" . __( 'Read More' ) . "</a> <a href='index.php?feed_dismiss=" . md5( $title ) . "'>" . __( 'Dismiss' ) . "</a></p>";
-		echo "<div class='updated fade'>$msg</div>";
+		echo "<div class='updated'>$msg</div>";
 	} elseif ( is_super_admin() ) {
 		printf( '<div id="update-nag">' . __( 'Your feed at %s is empty.' ) . '</div>', esc_html( $url ) );
 	}
@@ -807,10 +809,7 @@ function _admin_notice_multisite_activate_plugins_page() {
  * @param $user_id
  */
 function grant_super_admin( $user_id ) {
-	global $current_user;
-
-	if ( $current_user->ID == $user_id || !current_user_can( 'manage_network_options' ) )
-		return;
+	do_action( 'grant_super_admin', $user_id );
 
 	$super_admins = get_site_option( 'site_admins', array( 'admin' ) );
 
@@ -818,7 +817,10 @@ function grant_super_admin( $user_id ) {
 	if ( ! in_array( $user->user_login, $super_admins ) ) {
 		$super_admins[] = $user->user_login;
 		update_site_option( 'site_admins' , $super_admins );
+		do_action( 'granted_super_admin', $user_id );
+		return true;
 	}
+	return false;
 }
 
 /**
@@ -828,27 +830,18 @@ function grant_super_admin( $user_id ) {
  * @param $user_id
  */
 function revoke_super_admin( $user_id ) {
-	global $current_user;
-
-	if ( $current_user->ID == $user_id || !current_user_can( 'manage_network_options' ) )
-		return;
+	do_action( 'revoke_super_admin', $user_id );
 
 	$super_admins = get_site_option( 'site_admins', array( 'admin' ) );
-	if ( count( $super_admins ) < 2 )
-		return;
-
-	$admin_email = get_site_option( 'admin_email' );
-	
 	$user = new WP_User( $user_id );
-	if ( $user->ID != $current_user->ID || $user->user_email != $admin_email ) {
-		foreach ( $super_admins as $key => $username ) {
-			if ( $username == $user->user_login ) {
-				unset( $super_admins[$key] );
-				break;
-			}
+	if ( $user->user_email != get_site_option( 'admin_email' ) ) {
+		if ( false !== ( $key = array_search( $user->user_login, $super_admins ) ) ) {
+			unset( $super_admins[$key] );
+			update_site_option( 'site_admins', $super_admins );
+			do_action( 'revoked_super_admin', $user_id );
+			return true;
 		}
 	}
-
-	update_site_option( 'site_admins' , $super_admins );
+	return false;
 }
 ?>

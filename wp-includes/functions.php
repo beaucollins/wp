@@ -1008,7 +1008,10 @@ function delete_all_user_settings() {
  * @return mixed A scalar data
  */
 function maybe_serialize( $data ) {
-	if ( !is_scalar( $data ) )
+	if ( is_array( $data ) || is_object( $data ) )
+		return serialize( $data );
+
+	if ( is_serialized( $data ) )
 		return serialize( $data );
 
 	return $data;
@@ -2325,12 +2328,12 @@ function wp_ext2type( $ext ) {
 	$ext2type = apply_filters( 'ext2type', array(
 		'audio'       => array( 'aac', 'ac3',  'aif',  'aiff', 'm3a',  'm4a',   'm4b', 'mka', 'mp1', 'mp2',  'mp3', 'ogg', 'oga', 'ram', 'wav', 'wma' ),
 		'video'       => array( 'asf', 'avi',  'divx', 'dv',   'flv',  'm4v',   'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'mpv', 'ogm', 'ogv', 'qt',  'rm', 'vob', 'wmv' ),
-		'document'    => array( 'doc', 'docx', 'docm', 'dotm', 'odt',  'pages', 'pdf', 'rtf' ),
+		'document'    => array( 'doc', 'docx', 'docm', 'dotm', 'odt',  'pages', 'pdf', 'rtf', 'wp',  'wpd' ),
 		'spreadsheet' => array( 'numbers',     'ods',  'xls',  'xlsx', 'xlsb',  'xlsm' ),
 		'interactive' => array( 'key', 'ppt',  'pptx', 'pptm', 'odp',  'swf' ),
-		'text'        => array( 'asc', 'txt', 'csv' ),
+		'text'        => array( 'asc', 'csv',  'tsv',  'txt' ),
 		'archive'     => array( 'bz2', 'cab',  'dmg',  'gz',   'rar',  'sea',   'sit', 'sqx', 'tar', 'tgz',  'zip' ),
-		'code'        => array( 'css', 'html', 'php',  'js' ),
+		'code'        => array( 'css', 'htm',  'html', 'php',  'js' ),
 	));
 	foreach ( $ext2type as $type => $exts )
 		if ( in_array( $ext, $exts ) )
@@ -2393,6 +2396,7 @@ function get_allowed_mime_types() {
 		'mpeg|mpg|mpe' => 'video/mpeg',
 		'txt|asc|c|cc|h' => 'text/plain',
 		'csv' => 'text/csv',
+		'tsv' => 'text/tab-separated-values',
 		'rtx' => 'text/richtext',
 		'css' => 'text/css',
 		'htm|html' => 'text/html',
@@ -2434,6 +2438,8 @@ function get_allowed_mime_types() {
 		'odc' => 'application/vnd.oasis.opendocument.chart',
 		'odb' => 'application/vnd.oasis.opendocument.database',
 		'odf' => 'application/vnd.oasis.opendocument.formula',
+		// wordperfect formats
+		'wp|wpd' => 'application/wordperfect',
 		) );
 	}
 

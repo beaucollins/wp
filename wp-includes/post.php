@@ -19,8 +19,8 @@ function create_initial_post_types() {
 										'singular_label' => __('Post'),
 										'public' => true,
 										'show_ui' => false,
-										'_builtin' => true,
-										'_edit_link' => 'post.php?post=%d',
+										'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+										'_edit_link' => 'post.php?post=%d', /* internal use only. don't use this when registering your own post type. */
 										'capability_type' => 'post',
 										'hierarchical' => false,
 										'rewrite' => false,
@@ -32,8 +32,8 @@ function create_initial_post_types() {
 										'singular_label' => __('Page'),
 										'public' => true,
 										'show_ui' => false,
-										'_builtin' => true,
-										'_edit_link' => 'post.php?post=%d',
+										'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+										'_edit_link' => 'post.php?post=%d', /* internal use only. don't use this when registering your own post type. */
 										'capability_type' => 'page',
 										'hierarchical' => true,
 										'rewrite' => false,
@@ -44,8 +44,8 @@ function create_initial_post_types() {
 	register_post_type( 'attachment', array('label' => __('Media'),
 											'public' => true,
 											'show_ui' => false,
-											'_builtin' => true,
-											'_edit_link' => 'media.php?attachment_id=%d',
+											'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+											'_edit_link' => 'media.php?attachment_id=%d', /* internal use only. don't use this when registering your own post type. */
 											'capability_type' => 'post',
 											'hierarchical' => false,
 											'rewrite' => false,
@@ -55,8 +55,8 @@ function create_initial_post_types() {
 	register_post_type( 'revision', array(	'label' => __('Revisions'),
 											'singular_label' => __('Revision'),
 											'public' => false,
-											'_builtin' => true,
-											'_edit_link' => 'revision.php?revision=%d',
+											'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+											'_edit_link' => 'revision.php?revision=%d', /* internal use only. don't use this when registering your own post type. */
 											'capability_type' => 'post',
 											'hierarchical' => false,
 											'rewrite' => false,
@@ -67,7 +67,7 @@ function create_initial_post_types() {
 												'singular_label' => __('Navigation Menu Item'),
 												'public' => false,
 												'show_ui' => false,
-												'_builtin' => true,
+												'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
 												'capability_type' => 'post',
 												'hierarchical' => false,
 												'rewrite' => false,
@@ -76,44 +76,44 @@ function create_initial_post_types() {
 
 	register_post_status( 'publish', array(	'label' => _x('Published', 'post'),
 											'public' => true,
-											'_builtin' => true,
+											'_builtin' => true, /* internal use only. */
 											'label_count' => _n_noop('Published <span class="count">(%s)</span>', 'Published <span class="count">(%s)</span>')
 										) );
 
 	register_post_status( 'future', array(	'label' => _x('Scheduled', 'post'),
 											'protected' => true,
-											'_builtin' => true,
+											'_builtin' => true, /* internal use only. */
 											'label_count' => _n_noop('Scheduled <span class="count">(%s)</span>', 'Scheduled <span class="count">(%s)</span>')
 										) );
 
 	register_post_status( 'draft', array(	'label' => _x('Draft', 'post'),
 											'protected' => true,
-											'_builtin' => true,
+											'_builtin' => true, /* internal use only. */
 											'label_count' => _n_noop('Draft <span class="count">(%s)</span>', 'Drafts <span class="count">(%s)</span>')
 										) );
 
 	register_post_status( 'pending', array(	'label' => _x('Pending', 'post'),
 											'protected' => true,
-											'_builtin' => true,
+											'_builtin' => true, /* internal use only. */
 											'label_count' => _n_noop('Pending <span class="count">(%s)</span>', 'Pending <span class="count">(%s)</span>')
 										) );
 
 	register_post_status( 'private', array(	'label' => _x('Private', 'post'),
 											'private' => true,
-											'_builtin' => true,
+											'_builtin' => true, /* internal use only. */
 											'label_count' => _n_noop('Private <span class="count">(%s)</span>', 'Private <span class="count">(%s)</span>')
 										) );
 
 	register_post_status( 'trash', array(	'label' => _x('Trash', 'post'),
 											'internal' => true,
 											'show_in_admin_status_list' => true,
-											'_builtin' => true,
+											'_builtin' => true, /* internal use only. */
 											'label_count' => _n_noop('Trash <span class="count">(%s)</span>', 'Trash <span class="count">(%s)</span>')
 										) );
 
 	register_post_status( 'auto-draft', array(	'label' => _x('Auto-Draft', 'post'),
 											'internal' => true,
-											'_builtin' => true,
+											'_builtin' => true, /* internal use only. */
 											'label_count' => _n_noop('Auto-Draft <span class="count">(%s)</span>', 'Auto-Drafts <span class="count">(%s)</span>')
 										) );
 }
@@ -661,26 +661,47 @@ function get_post_stati( $args = array(), $output = 'names', $operator = 'or' ) 
 }
 
 /**
+ * Whether the post type is hierarchical.
+ *
+ * A false return value might also mean that the post type does not exist.
+ *
+ * @since 3.0.0
+ * @see get_post_type_object
+ *
+ * @param string|int|object $post Post type name, post id, or a post object.
+ * @return bool true if post type is hierarchical, else false.
+ */
+function is_post_type_hierarchical( $post = false ) {
+	if ( is_string($post) && $is_post_type = get_post_type_object($post) )
+		return $is_post_type->hierarchical;
+
+	$ptype = get_post( $post );
+	if ( $ptype && $is_post_type = get_post_type_object($ptype->post_type) )
+		return $is_post_type->hierarchical;
+
+	return false;
+}
+
+/**
  * Retrieve the post type of the current post or of a given post.
  *
  * @since 2.1.0
  *
- * @uses $wpdb
- * @uses $posts The Loop post global
+ * @uses $post The Loop current post global
  *
- * @param mixed $post Optional. Post object or post ID.
+ * @param mixed $the_post Optional. Post object or post ID.
  * @return bool|string post type or false on failure.
  */
-function get_post_type($post = false) {
-	global $posts;
+function get_post_type($the_post = false) {
+	global $post;
 
-	if ( false === $post )
-		$post = $posts[0];
-	elseif ( (int) $post )
-		$post = get_post($post, OBJECT);
+	if ( false === $the_post )
+		$the_post = $post;
+	elseif ( is_numeric($the_post) )
+		$the_post = get_post($the_post);
 
-	if ( is_object($post) )
-		return $post->post_type;
+	if ( is_object($the_post) )
+		return $the_post->post_type;
 
 	return false;
 }
@@ -869,6 +890,8 @@ function register_post_type($post_type, $args = array()) {
 		add_action('add_meta_boxes_' . $post_type, $args->register_meta_box_cb, 10, 1);
 
 	$wp_post_types[$post_type] = $args;
+
+	add_action( 'future_' . $post_type, '_future_post_hook', 5, 2 );
 
 	foreach ( $args->taxonomies as $taxonomy ) {
 		register_taxonomy_for_object_type( $taxonomy, $post_type );
@@ -2131,6 +2154,10 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 		$now = gmdate('Y-m-d H:i:59');
 		if ( mysql2date('U', $post_date_gmt, false) > mysql2date('U', $now, false) )
 			$post_status = 'future';
+	} elseif( 'future' == $post_status ) {
+		$now = gmdate('Y-m-d H:i:59');
+		if ( mysql2date('U', $post_date_gmt, false) <= mysql2date('U', $now, false) )
+			$post_status = 'publish';
 	}
 
 	if ( empty($comment_status) ) {
