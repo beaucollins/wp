@@ -728,7 +728,7 @@ function get_trackback_url() {
  */
 function trackback_url( $deprecated_echo = true ) {
 	if ( $deprecated_echo !== true )
-		_deprecated_argument( __FUNCTION__, '2.5', __('Use get_trackback_url() instead if you do not want the value echoed.') );
+		_deprecated_argument( __FUNCTION__, '2.5', __('Use <code>get_trackback_url()</code> instead if you do not want the value echoed.') );
 	if ( $deprecated_echo )
 		echo get_trackback_url();
 	else
@@ -1131,16 +1131,29 @@ function cancel_comment_reply_link($text = '') {
 }
 
 /**
- * Output hidden input HTML for replying to comments.
+ * Retrieve hidden input HTML for replying to comments.
  *
- * @since 2.7.0
+ * @since 3.0.0
+ *
+ * @return string Hidden input HTML for replying to comments
  */
-function comment_id_fields() {
+function get_comment_id_fields() {
 	global $id;
 
 	$replytoid = isset($_GET['replytocom']) ? (int) $_GET['replytocom'] : 0;
-	echo "<input type='hidden' name='comment_post_ID' value='$id' id='comment_post_ID' />\n";
-	echo "<input type='hidden' name='comment_parent' id='comment_parent' value='$replytoid' />\n";
+	$result  = "<input type='hidden' name='comment_post_ID' value='$id' id='comment_post_ID' />\n";
+	$result .= "<input type='hidden' name='comment_parent' id='comment_parent' value='$replytoid' />\n";
+	return apply_filters('comment_id_fields', $result, $id, $replytoid);
+}
+
+/**
+ * Output hidden input HTML for replying to comments.
+ *
+ * @since 2.7.0
+ * @see get_comment_id_fields() Echoes result
+ */
+function comment_id_fields() {
+	echo get_comment_id_fields();
 }
 
 /**

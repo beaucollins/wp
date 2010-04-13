@@ -103,6 +103,9 @@ function get_sidebar( $name = null ) {
  * specialised part will be included. If the theme contains no {slug}.php file
  * then no template will be included.
  *
+ * The template is included using require, not require_once, so you may include the
+ * same template part multiple times.
+ *
  * For the parameter, if the file is called "{slug}-special.php" then specify
  * "special".
  *
@@ -114,7 +117,7 @@ function get_sidebar( $name = null ) {
  * @param string $name The name of the specialised template.
  */
 function get_template_part( $slug, $name = null ) {
-	do_action( "get_template_part{$slug}", $name );
+	do_action( "get_template_part_{$slug}", $slug, $name );
 
 	$templates = array();
 	if ( isset($name) )
@@ -122,7 +125,7 @@ function get_template_part( $slug, $name = null ) {
 
 	$templates[] = "{$slug}.php";
 
-	locate_template($templates, true);
+	locate_template($templates, true, false);
 }
 
 /**
@@ -395,7 +398,7 @@ function get_bloginfo( $show = '', $filter = 'raw' ) {
 	switch( $show ) {
 		case 'home' : // DEPRECATED
 		case 'siteurl' : // DEPRECATED
-			_deprecated_argument( __FUNCTION__, '2.2', sprintf( __('The \'%1$s\' option is deprecated for the family of bloginfo() functions. Use the \'%2$s\' option instead.'), $show, 'url' ) );
+			_deprecated_argument( __FUNCTION__, '2.2', sprintf( __('The <code>%1$s</code> option is deprecated for the family of <code>bloginfo()</code> functions. Use the <code>%2$s</code> option instead.'), $show, 'url' ) );
 		case 'url' :
 			$output = home_url();
 			break;

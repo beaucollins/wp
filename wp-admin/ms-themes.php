@@ -18,7 +18,7 @@ require_once( './admin-header.php' );
 
 if ( isset( $_GET['updated'] ) ) {
 	?>
-	<div id="message" class="updated fade"><p><?php _e( 'Site themes saved.' ) ?></p></div>
+	<div id="message" class="updated"><p><?php _e( 'Site themes saved.' ) ?></p></div>
 	<?php
 }
 
@@ -29,7 +29,7 @@ $allowed_themes = get_site_allowed_themes();
 	<form action="<?php echo esc_url( admin_url( 'ms-edit.php?action=updatethemes' ) ); ?>" method="post">
 		<?php screen_icon(); ?>
 		<h2><?php _e( 'Network Themes' ) ?></h2>
-		<p><?php _e( 'Disable themes network-wide. You can enable themes on a site by site basis.' ) ?></p>
+		<p><?php _e( 'Disable themes network-wide. You can enable themes on a site-by-site basis.' ) ?></p>
 		<table class="widefat">
 			<thead>
 				<tr>

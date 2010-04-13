@@ -98,7 +98,7 @@ function wp_default_scripts( &$scripts ) {
 		'l10n_print_after' => 'try{convertEntities(wpAjax);}catch(e){};'
 	) );
 
-	$scripts->add( 'autosave', "/wp-includes/js/autosave$suffix.js", array('schedule', 'wp-ajax-response'), '20100205' );
+	$scripts->add( 'autosave', "/wp-includes/js/autosave$suffix.js", array('schedule', 'wp-ajax-response'), '20100410' );
 	$scripts->add_data( 'autosave', 'group', 1 );
 
 	$scripts->add( 'wp-lists', "/wp-includes/js/wp-lists$suffix.js", array('wp-ajax-response'), '20091128' );
@@ -443,7 +443,7 @@ function wp_default_styles( &$styles ) {
 	// all colors stylesheets need to have the same query strings (cache manifest compat)
 	$colors_version = '20100406';
 
-	$styles->add( 'wp-admin', "/wp-admin/css/wp-admin$suffix.css", array(), '20100403c' );
+	$styles->add( 'wp-admin', "/wp-admin/css/wp-admin$suffix.css", array(), '20100411' );
 
 	$styles->add( 'ie', "/wp-admin/css/ie$suffix.css", array(), '20100219' );
 	$styles->add_data( 'ie', 'conditional', 'lte IE 7' );
@@ -464,7 +464,7 @@ function wp_default_styles( &$styles ) {
 	$styles->add( 'dashboard', "/wp-admin/css/dashboard$suffix.css", array(), '20100301' );
 	$styles->add( 'install', "/wp-admin/css/install$suffix.css", array(), '20100313' ); // Readme as well
 	$styles->add( 'theme-editor', "/wp-admin/css/theme-editor$suffix.css", array(), '20090625' );
-	$styles->add( 'press-this', "/wp-admin/css/press-this$suffix.css", array(), '20091022' );
+	$styles->add( 'press-this', "/wp-admin/css/press-this$suffix.css", array(), '20100411' );
 	$styles->add( 'thickbox', '/wp-includes/js/thickbox/thickbox.css', array(), '20090514' );
 	$styles->add( 'login', "/wp-admin/css/login$suffix.css", array(), '20100403' );
 	$styles->add( 'plugin-install', "/wp-admin/css/plugin-install$suffix.css", array(), '20100402' );
