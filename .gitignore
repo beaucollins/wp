@@ -1,2 +1,5 @@
 wp-config.php
 wp-content/uploads
+.nodelete
+wp-content/plugins/*
+wp-content/*.php
