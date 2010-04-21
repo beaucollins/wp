@@ -376,7 +376,7 @@ function image_resize_dimensions($orig_w, $orig_h, $dest_w, $dest_h, $crop = fal
  * @param string $suffix Optional. File Suffix.
  * @param string $dest_path Optional. New image file path.
  * @param int $jpeg_quality Optional, default is 90. Image quality percentage.
- * @return mixed WP_Error on failure. String with new destination path. Array of dimensions from {@link image_resize_dimensions()}
+ * @return mixed WP_Error on failure. String with new destination path.
  */
 function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $dest_path = null, $jpeg_quality = 90 ) {
 
@@ -391,7 +391,7 @@ function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $de
 
 	$dims = image_resize_dimensions($orig_w, $orig_h, $max_w, $max_h, $crop);
 	if ( !$dims )
-		return $dims;
+		return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions') );
 	list($dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h) = $dims;
 
 	$newimage = wp_imagecreatetruecolor( $dst_w, $dst_h );
@@ -609,9 +609,14 @@ function wp_get_attachment_image($attachment_id, $size = 'thumbnail', $icon = fa
 		$default_attr = array(
 			'src'	=> $src,
 			'class'	=> "attachment-$size",
-			'alt'	=> trim(strip_tags( $attachment->post_excerpt )),
+			'alt'	=> trim(strip_tags( get_post_meta($attachment_id, '_wp_attachment_image_alt', true) )), // Use Alt field first
 			'title'	=> trim(strip_tags( $attachment->post_title )),
 		);
+		if ( empty($default_attr['alt']) )
+			$default_attr['alt'] = trim(strip_tags( $attachment->post_excerpt )); // If not, Use the Caption
+		if ( empty($default_attr['alt']) )
+			$default_attr['alt'] = trim(strip_tags( $attachment->post_title )); // Finally, use the title
+
 		$attr = wp_parse_args($attr, $default_attr);
 		$attr = apply_filters( 'wp_get_attachment_image_attributes', $attr, $attachment );
 		$attr = array_map( 'esc_attr', $attr );
@@ -1332,7 +1337,7 @@ function wp_expand_dimensions( $example_width, $example_height, $max_width, $max
  * @return string The original URL on failure or the embed HTML on success.
  */
 function wp_oembed_get( $url, $args = '' ) {
-	require_once( 'class-oembed.php' );
+	require_once( ABSPATH . WPINC . '/class-oembed.php' );
 	$oembed = _wp_oembed_get_object();
 	return $oembed->get_html( $url, $args );
 }
@@ -1350,7 +1355,7 @@ function wp_oembed_get( $url, $args = '' ) {
  * @param boolean $regex Whether the $format parameter is in a regex format.
  */
 function wp_oembed_add_provider( $format, $provider, $regex = false ) {
-	require_once( 'class-oembed.php' );
+	require_once( ABSPATH . WPINC . '/class-oembed.php' );
 	$oembed = _wp_oembed_get_object();
 	$oembed->providers[$format] = array( $provider, $regex );
 }

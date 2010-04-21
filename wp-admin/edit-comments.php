@@ -7,7 +7,7 @@
  */
 
 /** WordPress Administration Bootstrap */
-require_once('admin.php');
+require_once('./admin.php');
 
 if ( !current_user_can('edit_posts') )
 	wp_die(__('Cheatin&#8217; uh?'));
@@ -105,7 +105,7 @@ if ( $post_id )
 else
 	$title = __('Edit Comments');
 
-require_once('admin-header.php');
+require_once('./admin-header.php');
 
 $mode = ( empty($_GET['mode']) ) ? 'detail' : esc_attr($_GET['mode']);
 
@@ -160,15 +160,15 @@ if ( isset($_GET['approved']) || isset($_GET['deleted']) || isset($_GET['trashed
 		}
 
 		if ( $unspammed > 0 )
-			$messages = sprintf( _n( '%s comment restored from the spam', '%s comments restored from the spam', $unspammed ), $unspammed );
+			$messages[] = sprintf( _n( '%s comment restored from the spam', '%s comments restored from the spam', $unspammed ), $unspammed );
 
 		if ( $trashed > 0 ) {
 			$ids = isset($_GET['ids']) ? $_GET['ids'] : 0;
-			$messages[] = sprintf( _n( '%s comment moved to the trash.', '%s comments moved to the trash.', $trashed ), $trashed ) . ' <a href="' . esc_url( wp_nonce_url( "edit-comments.php?doaction=undo&action=untrash&ids=$ids", "bulk-comments" ) ) . '">' . __('Undo') . '</a><br />';
+			$messages[] = sprintf( _n( '%s comment moved to the Trash.', '%s comments moved to the Trash.', $trashed ), $trashed ) . ' <a href="' . esc_url( wp_nonce_url( "edit-comments.php?doaction=undo&action=untrash&ids=$ids", "bulk-comments" ) ) . '">' . __('Undo') . '</a><br />';
 		}
 
 		if ( $untrashed > 0 )
-			$messages[] = sprintf( _n( '%s comment restored from the trash', '%s comments restored from the trash', $untrashed ), $untrashed );
+			$messages[] = sprintf( _n( '%s comment restored from the Trash', '%s comments restored from the Trash', $untrashed ), $untrashed );
 
 		if ( $deleted > 0 )
 			$messages[] = sprintf( _n( '%s comment permanently deleted', '%s comments permanently deleted', $deleted ), $deleted );
@@ -468,4 +468,4 @@ if ( $page_links )
 <?php
 wp_comment_reply('-1', true, 'detail');
 wp_comment_trashnotice();
-include('admin-footer.php'); ?>
+include('./admin-footer.php'); ?>

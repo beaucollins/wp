@@ -1249,8 +1249,6 @@ function post_rows( $posts = array() ) {
 		$post_ids[] = $a_post->ID;
 
 	$comment_pending_count = get_pending_comments_num($post_ids);
-	if ( empty($comment_pending_count) )
-		$comment_pending_count = array();
 
 	foreach ( $posts as $post ) {
 		if ( empty($comment_pending_count[$post->ID]) )
@@ -1359,7 +1357,7 @@ function _post_row($a_post, $pending_comments, $mode) {
 				elseif ( EMPTY_TRASH_DAYS )
 					$actions['trash'] = "<a class='submitdelete' title='" . esc_attr(__('Move this post to the Trash')) . "' href='" . get_delete_post_link($post->ID) . "'>" . __('Trash') . "</a>";
 				if ( 'trash' == $post->post_status || !EMPTY_TRASH_DAYS )
-					$actions['delete'] = "<a class='submitdelete' title='" . esc_attr(__('Delete this post permanently')) . "' href='" . wp_nonce_url( admin_url( sprintf($post_type_object->_edit_link . '&amp;action=delete', $post->ID) ), 'delete-' . $post->post_type . '_' . $post->ID ) . "'>" . __('Delete Permanently') . "</a>";
+					$actions['delete'] = "<a class='submitdelete' title='" . esc_attr(__('Delete this post permanently')) . "' href='" . get_delete_post_link($post->ID, '', true) . "'>" . __('Delete Permanently') . "</a>";
 			}
 			if ( in_array($post->post_status, array('pending', 'draft')) ) {
 				if ( current_user_can($post_type_object->edit_cap, $post->ID) )
@@ -2967,7 +2965,7 @@ function get_hidden_meta_boxes($screen) {
 	if ( is_string($screen) )
 		$screen = convert_to_screen($screen);
 
-	$hidden = get_user_option( "meta-box-hidden_$screen->id" );
+	$hidden = get_user_option( "metaboxhidden_$screen->id" );
 
 	// Hide slug boxes by default
 	if ( !is_array($hidden) )
@@ -3464,6 +3462,7 @@ function _admin_search_query() {
  *
  */
 function iframe_header( $title = '', $limit_styles = false ) {
+global $hook_suffix;
 ?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" <?php do_action('admin_xml_ns'); ?> <?php language_attributes(); ?>>
 <head>
@@ -3485,9 +3484,22 @@ function tb_close(){var win=window.dialogArguments||opener||parent||top;win.tb_r
 do_action('admin_print_styles');
 do_action('admin_print_scripts');
 do_action('admin_head');
+
+$admin_body_class = preg_replace('/[^a-z0-9_-]+/i', '-', $hook_suffix);
+if ( get_user_setting('mfold') == 'f' )
+	$admin_body_class .= ' folded';
 ?>
 </head>
-<body<?php if ( isset($GLOBALS['body_id']) ) echo ' id="' . $GLOBALS['body_id'] . '"'; ?>>
+<body<?php if ( isset($GLOBALS['body_id']) ) echo ' id="' . $GLOBALS['body_id'] . '"'; ?>  class="wp-admin no-js<?php echo apply_filters( 'admin_body_class', '' ) . " $admin_body_class"; ?>">
+<script type="text/javascript">
+//<![CDATA[
+(function(){
+var c = document.body.className;
+c = c.replace(/no-js/, 'js');
+document.body.className = c;
+})();
+//]]>
+</script>
 <?php
 }
 
@@ -3569,11 +3581,8 @@ function screen_meta($screen) {
 	}
 
 	$show_screen = false;
-	$show_on_screen = false;
-	if ( !empty($wp_meta_boxes[$screen->id]) || !empty($column_screens) ) {
+	if ( !empty($wp_meta_boxes[$screen->id]) || !empty($column_screens) )
 		$show_screen = true;
-		$show_on_screen = true;
-	}
 
 	$screen_options = screen_options($screen);
 	if ( $screen_options )
@@ -3597,7 +3606,6 @@ function screen_meta($screen) {
 ?>
 <div id="screen-options-wrap" class="hidden">
 	<form id="adv-settings" action="" method="post">
-<?php if ( $show_on_screen ) : ?>
 	<h5><?php _e('Show on screen') ?></h5>
 	<div class="metabox-prefs">
 <?php
@@ -3607,7 +3615,6 @@ function screen_meta($screen) {
 ?>
 	<br class="clear" />
 	</div>
-<?php endif; ?>
 <?php echo screen_layout($screen); ?>
 <?php echo $screen_options; ?>
 <?php echo $settings; ?>
@@ -3641,7 +3648,7 @@ function screen_meta($screen) {
 	$default_help .= __('<a href="http://wordpress.org/support/" target="_blank">Support Forums</a>');
 	$contextual_help .= apply_filters('default_contextual_help', $default_help);
 	$contextual_help .= "</div>\n";
-	echo apply_filters('contextual_help', $contextual_help, $screen);
+	echo apply_filters('contextual_help', $contextual_help, $screen->id, $screen);
 	?>
 	</div>
 
@@ -3737,34 +3744,31 @@ function screen_options($screen) {
 
 	switch ( $screen->base ) {
 		case 'edit':
-			$per_page_label = __('Posts per page:');
-			break;
 		case 'edit-pages':
-			$per_page_label = __('Pages per page:');
+			$post_type = 'post';
+			if ( isset($_GET['post_type']) && in_array( $_GET['post_type'], get_post_types( array('public' => true ) ) ) )
+				$post_type = $_GET['post_type'];
+			$post_type_object = get_post_type_object($post_type);
+			$per_page_label = $post_type_object->label;
 			break;
 		case 'ms-sites':
-			$per_page_label = __('Sites per page:');
+			$per_page_label = __('Sites');
 			break;
 		case 'ms-users':
-			$per_page_label = __('Users per page:');
+			$per_page_label = __('Users');
 			break;
 		case 'edit-comments':
-			$per_page_label = __('Comments per page:');
+			$per_page_label = __('Comments');
 			break;
 		case 'upload':
-			$per_page_label = __('Media items per page:');
+			$per_page_label = __('Media items');
 			break;
 		case 'edit-tags':
-			global $taxonomy, $tax;
-			if ( 'post_tag' == $taxonomy )
-				$per_page_label = __('Tags per page:');
-			elseif ( 'category' == $taxonomy )
-				$per_page_label = __('Categories per page:');
-			else
-				$per_page_label = sprintf(_x('%s per page:', '%s: plural taxonomy name'), $tax->label);
+			global $tax;
+			$per_page_label = $tax->label;
 			break;
 		case 'plugins':
-			$per_page_label = __('Plugins per page:');
+			$per_page_label = __('Plugins');
 			break;
 		default:
 			return '';
@@ -3772,10 +3776,10 @@ function screen_options($screen) {
 
 	$option = str_replace( '-', '_', "{$screen->id}_per_page" );
 	if ( 'edit_tags_per_page' == $option ) {
-		if ( 'category' == $taxonomy )
+		if ( 'category' == $tax->name )
 			$option = 'categories_per_page';
-		elseif ( 'post_tag' != $taxonomy )
-			$option = 'edit_' . $taxonomy . '_per_page';
+		elseif ( 'post_tag' != $tax->name )
+			$option = 'edit_' . $tax->name . '_per_page';
 	}
 
 	$per_page = (int) get_user_option( $option );
@@ -3793,10 +3797,9 @@ function screen_options($screen) {
 	else
 		$per_page = apply_filters( $option, $per_page );
 
-	$return = '<h5>' . __('Options') . "</h5>\n";
-	$return .= "<div class='screen-options'>\n";
+	$return = "<div class='screen-options'>\n";
 	if ( !empty($per_page_label) )
-		$return .= "<label for='$option'>$per_page_label</label> <input type='text' class='screen-per-page' name='wp_screen_options[value]' id='$option' maxlength='3' value='$per_page' />\n";
+		$return .= "<input type='text' class='screen-per-page' name='wp_screen_options[value]' id='$option' maxlength='3' value='$per_page' /> <label for='$option'>$per_page_label</label>\n";
 	$return .= "<input type='submit' class='button' value='" . esc_attr__('Apply') . "' />";
 	$return .= "<input type='hidden' name='wp_screen_options[option]' value='" . esc_attr($option) . "' />";
 	$return .= "</div>\n";
@@ -3916,6 +3919,12 @@ function set_current_screen( $id =  '' ) {
 	}
 
 	$current_screen = (object) $current_screen;
+
+	// Map index to dashboard
+	if ( 'index' == $current_screen->base )
+		$current_screen->base = 'dashboard';
+	if ( 'index' == $current_screen->id )
+		$current_screen->id = 'dashboard';
 
 	if ( 'edit' == $current_screen->id ) {
 		if ( empty($typenow) )

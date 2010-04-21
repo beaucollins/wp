@@ -71,7 +71,7 @@ function wp_install( $blog_title, $user_name, $user_email, $public, $deprecated 
 		$email_password = true;
 	} else if ( !$user_id ) {
 		// Password has been provided
-		$message = __('<em>Your chosen password.</em>');
+		$message = '<em>'.__('Your chosen password.').'</em>';
 		$user_id = wp_create_user($user_name, $user_password, $user_email);
 	} else {
 		$message =  __('User already exists. Password inherited.');
@@ -440,7 +440,7 @@ function upgrade_all() {
 	if ( $wp_current_db_version < 11958 )
 		upgrade_290();
 
-	if ( $wp_current_db_version < 13974 )
+	if ( $wp_current_db_version < 14138 )
 		upgrade_300();
 
 	maybe_disable_automattic_widgets();
@@ -1114,6 +1114,12 @@ function upgrade_300() {
 			add_site_option( 'siteurl', '' );
 	}
 
+	// #11866 (Convert the taxonomy children cache into a transient) - Remove old cache.
+	if ( $wp_current_db_version < 14138 ) {
+		foreach ( get_taxonomies( array('hierarchical' => true) )  as $taxonomy )
+			delete_option($taxonomy . '_children');
+	}
+
 	// 3.0-alpha nav menu postmeta changes. can be removed before release. // r13802
 	if ( $wp_current_db_version >= 13226 && $wp_current_db_version < 13974 )
 		$wpdb->query( "DELETE FROM $wpdb->postmeta WHERE meta_key IN( 'menu_type', 'object_id', 'menu_new_window', 'menu_link', '_menu_item_append', 'menu_item_append', 'menu_item_type', 'menu_item_object_id', 'menu_item_target', 'menu_item_classes', 'menu_item_xfn', 'menu_item_url' )" );
@@ -1613,7 +1619,7 @@ function make_site_theme_from_oldschool($theme_name, $template) {
 		if ($oldfile == 'index.php') { // Check to make sure it's not a new index
 			$index = implode('', file("$oldpath/$oldfile"));
 			if (strpos($index, 'WP_USE_THEMES') !== false) {
-				if (! @copy(WP_CONTENT_DIR . '/themes/default/index.php', "$site_dir/$newfile"))
+				if (! @copy(WP_CONTENT_DIR . '/themes/'.WP_FALLBACK_THEME.'/index.php', "$site_dir/$newfile"))
 					return false;
 				continue; // Don't copy anything
 				}
@@ -1673,7 +1679,7 @@ function make_site_theme_from_oldschool($theme_name, $template) {
  */
 function make_site_theme_from_default($theme_name, $template) {
 	$site_dir = WP_CONTENT_DIR . "/themes/$template";
-	$default_dir = WP_CONTENT_DIR . '/themes/default';
+	$default_dir = WP_CONTENT_DIR . '/themes/'.WP_FALLBACK_THEME;
 
 	// Copy files from the default theme to the site theme.
 	//$files = array('index.php', 'comments.php', 'comments-popup.php', 'footer.php', 'header.php', 'sidebar.php', 'style.css');
@@ -1769,7 +1775,7 @@ function make_site_theme() {
 
 	// Make the new site theme active.
 	$current_template = __get_option('template');
-	if ($current_template == 'default') {
+	if ($current_template == WP_FALLBACK_THEME) {
 		update_option('template', $template);
 		update_option('stylesheet', $template);
 	}

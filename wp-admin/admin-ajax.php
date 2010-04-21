@@ -19,7 +19,7 @@ require_once('../wp-load.php');
 if ( ! isset( $_REQUEST['action'] ) )
 	die('-1');
 
-require_once('includes/admin.php');
+require_once('./includes/admin.php');
 @header('Content-Type: text/html; charset=' . get_option('blog_charset'));
 send_nosniff_header();
 
@@ -908,6 +908,7 @@ case 'autosave' : // The name of this action is hardcoded in edit_post()
 	$data = '';
 	/* translators: draft saved date format, see http://php.net/date */
 	$draft_saved_date_format = __('g:i:s a');
+	/* translators: %s: date and time */
 	$message = sprintf( __('Draft saved at %s.'), date_i18n( $draft_saved_date_format ) );
 
 	$supplemental = array();
@@ -1003,11 +1004,11 @@ case 'closed-postboxes' :
 		die('-1');
 
 	if ( is_array($closed) )
-		update_user_option($user->ID, "closedpostboxes_$page", $closed);
+		update_user_option($user->ID, "closedpostboxes_$page", $closed, true);
 
 	if ( is_array($hidden) ) {
 		$hidden = array_diff( $hidden, array('submitdiv', 'linksubmitdiv', 'manage-menu', 'create-menu') ); // postboxes that are always shown
-		update_user_option($user->ID, "meta-box-hidden_$page", $hidden);
+		update_user_option($user->ID, "metaboxhidden_$page", $hidden, true);
 	}
 
 	die('1');
@@ -1058,7 +1059,7 @@ case 'sample-permalink':
 	check_ajax_referer( 'samplepermalink', 'samplepermalinknonce' );
 	$post_id = isset($_POST['post_id'])? intval($_POST['post_id']) : 0;
 	$title = isset($_POST['new_title'])? $_POST['new_title'] : '';
-	$slug = isset($_POST['new_slug'])? $_POST['new_slug'] : '';
+	$slug = isset($_POST['new_slug'])? $_POST['new_slug'] : null;
 	die(get_sample_permalink_html($post_id, $title, $slug));
 break;
 case 'inline-save':

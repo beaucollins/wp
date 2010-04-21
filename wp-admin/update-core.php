@@ -7,7 +7,7 @@
  */
 
 /** WordPress Administration Bootstrap */
-require_once('admin.php');
+require_once('./admin.php');
 
 if ( ! current_user_can('update_plugins') )
 	wp_die(__('You do not have sufficient permissions to update plugins for this blog.'));
@@ -244,7 +244,7 @@ function list_theme_updates() {
 
 ?>
 <h3><?php _e( 'Themes' ); ?></h3>
-<p><?php _e( 'The following themes have new versions available. Check the ones you want to update and then click &#8220;Update Themes&#8221.' ); ?></p>
+<p><?php _e( 'The following themes have new versions available. Check the ones you want to update and then click &#8220;Update Themes&#8221;.' ); ?></p>
 <p><?php printf( __('<strong>Please Note:</strong> Any customizations you have made to the Themes files will be lost. Please consider using <a href="%s">child themes</a> for modifications.'), _x('http://codex.wordpress.org/Child_Themes', 'Link used in suggestion to use child themes in GUU') ); ?></p>
 <form method="post" action="<?php echo $form_action; ?>" name="upgrade-themes" class="upgrade">
 <?php wp_nonce_field('upgrade-core'); ?>
@@ -376,7 +376,7 @@ $parent_file = 'tools.php';
 
 if ( 'upgrade-core' == $action ) {
 	wp_version_check();
-	require_once('admin-header.php');
+	require_once('./admin-header.php');
 	core_upgrade_preamble();
 } elseif ( 'do-core-upgrade' == $action || 'do-core-reinstall' == $action ) {
 	check_admin_referer('upgrade-core');
@@ -388,7 +388,7 @@ if ( 'upgrade-core' == $action ) {
 	elseif ( isset( $_POST['undismiss'] ) )
 		do_undismiss_core_update();
 
-	require_once('admin-header.php');
+	require_once('./admin-header.php');
 	if ( 'do-core-reinstall' == $action )
 		$reinstall = true;
 	else
@@ -414,7 +414,7 @@ if ( 'upgrade-core' == $action ) {
 
 	$title = __('Update Plugins');
 
-	require_once('admin-header.php');
+	require_once('./admin-header.php');
 	echo '<div class="wrap">';
 	screen_icon('plugins');
 	echo '<h2>' . esc_html__('Update Plugins') . '</h2>';
@@ -437,7 +437,7 @@ if ( 'upgrade-core' == $action ) {
 
 	$title = __('Update Themes');
 
-	require_once('admin-header.php');
+	require_once('./admin-header.php');
 	echo '<div class="wrap">';
 	screen_icon('themes');
 	echo '<h2>' . esc_html__('Update Themes') . '</h2>';
@@ -445,4 +445,4 @@ if ( 'upgrade-core' == $action ) {
 	echo '</div>';
 }
 
-include('admin-footer.php');
+include('./admin-footer.php');

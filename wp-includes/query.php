@@ -2031,9 +2031,13 @@ class WP_Query {
 				$post_ids = get_objects_in_term($term_ids, $taxonomy);
 				if ( !is_wp_error($post_ids) && !empty($post_ids) ) {
 					$whichcat .= " AND $wpdb->posts.ID IN (" . implode(', ', $post_ids) . ") ";
-					$post_type = 'any';
+					if ( '' === $post_type ) {
+						$post_type = 'any';
+						$post_status_join = true;
+					} elseif ( in_array('attachment', (array)$post_type) ) {
+						$post_status_join = true;
+					}
 					$q['post_status'] = 'publish';
-					$post_status_join = true;
 				} else {
 					$whichcat = " AND 0 ";
 				}
@@ -2076,7 +2080,6 @@ class WP_Query {
 				}
 			}
 			$q['author_name'] = sanitize_title($q['author_name']);
-			$q['author'] = $wpdb->get_var("SELECT ID FROM $wpdb->users WHERE user_nicename='".$q['author_name']."'");
 			$q['author'] = get_user_by('slug', $q['author_name']);
 			if ( $q['author'] )
 				$q['author'] = $q['author']->ID;
@@ -2255,7 +2258,7 @@ class WP_Query {
 
 			if ( is_admin() ) {
 				// Add protected states that should show in the admin all list.
-				$admin_all_states = get_post_stati( array('protected' => true, 'show_in_admin_all_list' => true), 'names', 'and' );
+				$admin_all_states = get_post_stati( array('protected' => true, 'show_in_admin_all_list' => true) );
 				foreach ( (array) $admin_all_states as $state )
 					$where .= " OR $wpdb->posts.post_status = '$state'";
 			}
@@ -2292,9 +2295,8 @@ class WP_Query {
 		// Paging
 		if ( empty($q['nopaging']) && !$this->is_singular ) {
 			$page = absint($q['paged']);
-			if (empty($page)) {
+			if ( empty($page) )
 				$page = 1;
-			}
 
 			if ( empty($q['offset']) ) {
 				$pgstrt = '';
@@ -2459,7 +2461,7 @@ class WP_Query {
 					$sticky_offset++;
 					// Remove post from sticky posts array
 					$offset = array_search($sticky_post->ID, $sticky_posts);
-					array_splice($sticky_posts, $offset, 1);
+					unset( $sticky_posts[$offset] );
 				}
 			}
 

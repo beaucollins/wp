@@ -7,7 +7,7 @@
  */
 
 /** WordPress Administration Bootstrap */
-require_once('admin.php');
+require_once('./admin.php');
 
 if ( !current_user_can('create_users') )
 	wp_die(__('Cheatin&#8217; uh?'));
@@ -45,9 +45,13 @@ if ( isset($_REQUEST['action']) && 'adduser' == $_REQUEST['action'] ) {
 		if ( is_wp_error( $user_id ) ) {
 			$add_user_errors = $user_id;
 		} else {
-			$new_user_login = apply_filters('pre_user_login', sanitize_user(stripslashes($_REQUEST['user_login']), true));
-			$redirect = 'users.php?usersearch='. urlencode($new_user_login) . '&update=add';
-			wp_redirect( $redirect . '#user-' . $user_id );
+			if ( current_user_can('edit_users') ) {
+				$new_user_login = apply_filters('pre_user_login', sanitize_user(stripslashes($_REQUEST['user_login']), true));
+				$redirect = 'users.php?usersearch='. urlencode($new_user_login) . '&update=add' . '#user-' . $user_id;
+			} else {
+				$redirect = add_query_arg( 'update', 'add', 'user-new.php' );
+			}
+			wp_redirect( $redirect );
 			die();
 		}
 	} else {
@@ -110,20 +114,26 @@ wp_enqueue_script('password-strength-meter');
 
 require_once ('admin-header.php');
 
-if ( isset($_GET[ 'update' ]) && is_multisite() ) {
-	switch ( $_GET[ 'update' ] ) {
-		case "newuserconfimation":
-			$messages[] = '<div id="message" class="updated"><p>' . __('Invitation email sent to new user. A confirmation link must be clicked before their account is created.') . '</p></div>';
-			break;
-		case "add":
-			$messages[] = '<div id="message" class="updated"><p>' . __('Invitation email sent to user. A confirmation link must be clicked for them to be added to your blog.') . '</p></div>';
-			break;
-		case "addnoconfirmation":
-			$messages[] = '<div id="message" class="updated"><p>' . __('User has been added to your blog.') . '</p></div>';
-			break;
-		case "addexisting":
-			$messages[] = '<div id="message" class="updated"><p>' . __('That user is already a member of this blog.') . '</p></div>';
-			break;
+if ( isset($_GET['update']) ) {
+	$messages = array();
+	if ( is_multisite() ) {
+		switch ( $_GET['update'] ) {
+			case "newuserconfimation":
+				$messages[] = __('Invitation email sent to new user. A confirmation link must be clicked before their account is created.');
+				break;
+			case "add":
+				$messages[] = __('Invitation email sent to user. A confirmation link must be clicked for them to be added to your site.');
+				break;
+			case "addnoconfirmation":
+				$messages[] = __('User has been added to your site.');
+				break;
+			case "addexisting":
+				$messages[] = __('That user is already a member of this site.');
+				break;
+		}
+	} else {
+		if ( 'add' == $_GET['update'] )
+			$messages[] = __('User added.');
 	}
 }
 ?>
@@ -142,9 +152,9 @@ if ( isset($_GET[ 'update' ]) && is_multisite() ) {
 	</div>
 <?php endif;
 
-if ( ! empty($messages) ) {
+if ( ! empty( $messages ) ) {
 	foreach ( $messages as $msg )
-		echo $msg;
+		echo '<div id="message" class="updated"><p>' . $msg . '</p></div>';
 } ?>
 
 <?php if ( isset($add_user_errors) && is_wp_error( $add_user_errors ) ) : ?>
@@ -168,7 +178,7 @@ if ( !is_multisite() ) {
 	echo '<p>' . __( 'That person will be sent an email asking them to click a link confirming the invite. New users will then be sent an email with a randomly generated password and a login link.' ) . '</p>';
 }
 ?>
-<form action="#add-new-user" method="post" name="adduser" id="adduser" class="add:users: validate">
+<form action="#add-new-user" method="post" name="adduser" id="adduser" class="add:users: validate"<?php do_action('user_new_form_tag');?>>
 <?php wp_nonce_field('add-user') ?>
 <?php
 //Load up the passed data, else set to a default.
@@ -245,5 +255,5 @@ $new_user_send_password = !$_POST || isset($_POST['send_password']);
 
 </div>
 <?php
-include('admin-footer.php');
+include('./admin-footer.php');
 ?>

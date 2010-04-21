@@ -818,22 +818,20 @@ function add_menu_page( $page_title, $menu_title, $capability, $menu_slug, $func
 
 	$hookname = get_plugin_page_hookname( $menu_slug, '' );
 
-	if (!empty ( $function ) && !empty ( $hookname ) && current_user_can( $capability ) )
+	if ( !empty( $function ) && !empty( $hookname ) && current_user_can( $capability ) )
 		add_action( $hookname, $function );
 
-	if ( empty($icon_url) ) {
+	if ( empty($icon_url) )
 		$icon_url = esc_url( admin_url( 'images/generic.png' ) );
-	} elseif ( is_ssl() && 0 === strpos($icon_url, 'http://') ) {
+	elseif ( is_ssl() && 0 === strpos($icon_url, 'http://') )
 		$icon_url = 'https://' . substr($icon_url, 7);
-	}
 
-	$new_menu = array ( $menu_title, $capability, $menu_slug, $page_title, 'menu-top ' . $hookname, $hookname, $icon_url );
+	$new_menu = array( $menu_title, $capability, $menu_slug, $page_title, 'menu-top ' . $hookname, $hookname, $icon_url );
 
-	if ( NULL === $position  ) {
+	if ( null === $position  )
 		$menu[] = $new_menu;
-	} else {
+	else
 		$menu[$position] = $new_menu;
-	}
 
 	$_registered_pages[$hookname] = true;
 
@@ -1242,6 +1240,7 @@ function get_admin_page_title() {
 	global $submenu;
 	global $pagenow;
 	global $plugin_page;
+	global $typenow;
 
 	if ( ! empty ( $title ) )
 		return $title;
@@ -1267,11 +1266,17 @@ function get_admin_page_title() {
 			}
 		}
 	} else {
-		foreach (array_keys( $submenu ) as $parent) {
+		foreach ( array_keys( $submenu ) as $parent ) {
 			foreach ( $submenu[$parent] as $submenu_array ) {
 				if ( isset( $plugin_page ) &&
-					($plugin_page == $submenu_array[2] ) &&
-					(($parent == $pagenow ) || ($parent == $plugin_page ) || ($plugin_page == $hook ) || (($pagenow == 'admin.php' ) && ($parent1 != $submenu_array[2] ) ) )
+					( $plugin_page == $submenu_array[2] ) &&
+					(
+						( $parent == $pagenow ) ||
+						( $parent == $plugin_page ) ||
+						( $plugin_page == $hook ) ||
+						( $pagenow == 'admin.php' && $parent1 != $submenu_array[2] ) ||
+						( !empty($typenow) && $parent == $pagenow . '?post_type=' . $typenow)
+					)
 					) {
 						$title = $submenu_array[3];
 						return $submenu_array[3];
@@ -1292,9 +1297,9 @@ function get_admin_page_title() {
 		if ( empty ( $title ) ) {
 			foreach ( $menu as $menu_array ) {
 				if ( isset( $plugin_page ) &&
-					($plugin_page == $menu_array[2] ) &&
-					($pagenow == 'admin.php' ) &&
-					($parent1 == $menu_array[2] ) )
+					( $plugin_page == $menu_array[2] ) &&
+					( $pagenow == 'admin.php' ) &&
+					( $parent1 == $menu_array[2] ) )
 					{
 						$title = $menu_array[3];
 						return $menu_array[3];
@@ -1330,10 +1335,9 @@ function get_plugin_page_hookname( $plugin_page, $parent_page ) {
 		$page_type = $admin_page_hooks[$parent];
 	}
 
-
 	$plugin_name = preg_replace( '!\.php!', '', $plugin_page );
 
-	return $page_type.'_page_'.$plugin_name;
+	return $page_type . '_page_' . $plugin_name;
 }
 
 function user_can_access_admin_page() {

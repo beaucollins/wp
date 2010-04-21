@@ -271,11 +271,11 @@ function _get_page_link( $id = false, $leavename = false, $sample = false ) {
 	else
 		$post = &get_post($id);
 
-	$pagestruct = $wp_rewrite->get_page_permastruct();
+	$link = $wp_rewrite->get_page_permastruct();
 
-	if ( '' != $pagestruct && ( ( isset($post->post_status) && 'draft' != $post->post_status && 'pending' != $post->post_status ) || $sample ) ) {
-		$link = get_page_uri($id);
-		$link = ( $leavename ) ? $pagestruct : str_replace('%pagename%', $link, $pagestruct);
+	if ( '' != $link && ( ( isset($post->post_status) && 'draft' != $post->post_status && 'pending' != $post->post_status ) || $sample ) ) {
+		if ( ! $leavename )
+			$link = str_replace('%pagename%', get_page_uri($id), $link);
 		$link = home_url($link);
 		$link = user_trailingslashit($link, 'page');
 	} else {
@@ -471,7 +471,12 @@ function get_post_comments_feed_link($post_id = '', $feed = '') {
 		$feed = get_default_feed();
 
 	if ( '' != get_option('permalink_structure') ) {
-		$url = trailingslashit( get_permalink($post_id) ) . 'feed';
+		if ( 'page' == get_option('show_on_front') && $post_id == get_option('page_on_front') )
+			$url = _get_page_link( $post_id );
+		else
+			$url = get_permalink($post_id);
+
+		$url = trailingslashit($url) . 'feed';
 		if ( $feed != get_default_feed() )
 			$url .= "/$feed";
 		$url = user_trailingslashit($url, 'single_feed');
@@ -821,28 +826,21 @@ function edit_post_link( $link = null, $before = '', $after = '', $id = 0 ) {
 /**
  * Retrieve delete posts link for post.
  *
- * Can be used within the WordPress loop or outside of it. Can be used with
- * pages, posts, attachments, and revisions.
+ * Can be used within the WordPress loop or outside of it, with any post type.
  *
  * @since 2.9.0
  *
  * @param int $id Optional. Post ID.
- * @param string $context Optional, default to display. How to write the '&', defaults to '&amp;'.
+ * @param string $deprecated Not used.
+ * @param bool $force_delete Whether to bypass trash and force deletion. Default is false.
  * @return string
  */
-function get_delete_post_link($id = 0, $context = 'display') {
+function get_delete_post_link( $id = 0, $deprecated = '', $force_delete = false ) {
+	if ( ! empty( $deprecated ) )
+		_deprecated_argument( __FUNCTION__, '3.0.0' );
+
 	if ( !$post = &get_post( $id ) )
 		return;
-
-	if ( 'display' == $context )
-		$action = 'action=trash&amp;';
-	else
-		$action = 'action=trash&';
-
-	if ( 'display' == $context )
-		$action = '&amp;action=trash';
-	else
-		$action = '&action=trash';
 
 	$post_type_object = get_post_type_object( $post->post_type );
 	if ( !$post_type_object )
@@ -851,7 +849,11 @@ function get_delete_post_link($id = 0, $context = 'display') {
 	if ( !current_user_can( $post_type_object->delete_cap, $post->ID ) )
 		return;
 
-	return apply_filters( 'get_delete_post_link', wp_nonce_url( admin_url( sprintf($post_type_object->_edit_link . $action, $post->ID) ),  "trash-{$post->post_type}_" . $post->ID), $post->ID, $context );
+	$action = ( $force_delete || !EMPTY_TRASH_DAYS ) ? 'delete' : 'trash';
+
+	$delete_link = add_query_arg( 'action', $action, admin_url( sprintf( $post_type_object->_edit_link, $post->ID ) ) );
+
+	return apply_filters( 'get_delete_post_link', wp_nonce_url( $delete_link, "$action-{$post->post_type}_{$post->ID}" ), $post->ID, $force_delete );
 }
 
 /**

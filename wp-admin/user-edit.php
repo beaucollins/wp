@@ -7,7 +7,7 @@
  */
 
 /** WordPress Administration Bootstrap */
-require_once('admin.php');
+require_once('./admin.php');
 
 wp_reset_vars(array('action', 'redirect', 'profile', 'user_id', 'wp_http_referer'));
 
@@ -167,7 +167,7 @@ include ('admin-header.php');
 <?php screen_icon(); ?>
 <h2><?php echo esc_html( $title ); ?></h2>
 
-<form id="your-profile" action="<?php echo esc_url( admin_url( IS_PROFILE_PAGE ? 'profile.php' : 'user-edit.php' ) ); ?>" method="post">
+<form id="your-profile" action="<?php echo esc_url( admin_url( IS_PROFILE_PAGE ? 'profile.php' : 'user-edit.php' ) ); ?>" method="post"<?php do_action('user_edit_form_tag'); ?>>
 <?php wp_nonce_field('update-user_' . $user_id) ?>
 <?php if ( $wp_http_referer ) : ?>
 	<input type="hidden" name="wp_http_referer" value="<?php echo esc_url($wp_http_referer); ?>" />
@@ -373,6 +373,12 @@ if ( $show_password_fields ) :
 <?php
 break;
 }
-
-include('admin-footer.php');
+?>
+<script type="text/javascript" charset="utf-8">
+	if (window.location.hash == '#password') {
+		document.getElementById('pass1').focus();
+	}
+</script>
+<?php
+include('./admin-footer.php');
 ?>

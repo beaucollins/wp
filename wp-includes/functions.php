@@ -1197,7 +1197,9 @@ function do_enclose( $content, $post_ID ) {
 
 	foreach ( (array) $post_links_temp[0] as $link_test ) {
 		if ( !in_array( $link_test, $pung ) ) { // If we haven't pung it already
-			$test = parse_url( $link_test );
+			$test = @parse_url( $link_test );
+			if ( false === $test )
+				continue;
 			if ( isset( $test['query'] ) )
 				$post_links[] = $link_test;
 			elseif ( $test['path'] != '/' && $test['path'] != '' )
@@ -1215,13 +1217,15 @@ function do_enclose( $content, $post_ID ) {
 
 				// Check to see if we can figure out the mime type from
 				// the extension
-				$url_parts = parse_url( $url );
-				$extension = pathinfo( $url_parts['path'], PATHINFO_EXTENSION );
-				if ( !empty( $extension ) ) {
-					foreach ( get_allowed_mime_types( ) as $exts => $mime ) {
-						if ( preg_match( '!^(' . $exts . ')$!i', $extension ) ) {
-							$type = $mime;
-							break;
+				$url_parts = @parse_url( $url );
+				if ( false !== $url_parts ) {
+					$extension = pathinfo( $url_parts['path'], PATHINFO_EXTENSION );
+					if ( !empty( $extension ) ) {
+						foreach ( get_allowed_mime_types( ) as $exts => $mime ) {
+							if ( preg_match( '!^(' . $exts . ')$!i', $extension ) ) {
+								$type = $mime;
+								break;
+							}
 						}
 					}
 				}
@@ -2901,11 +2905,46 @@ function wp_parse_args( $args, $defaults = '' ) {
  * @param array|string $list
  * @return array Sanitized array of IDs
  */
-function wp_parse_id_list($list) {
+function wp_parse_id_list( $list ) {
 	if ( !is_array($list) )
 		$list = preg_split('/[\s,]+/', $list);
 
 	return array_unique(array_map('absint', $list));
+}
+
+/**
+ * Filters a list of objects, based on a set of key => value arguments
+ *
+ * @since 3.0.0
+ *
+ * @param array $list An array of objects to filter
+ * @param array $args An array of key => value arguments to match against each object
+ * @param string $operator The logical operation to perform. 'or' means only one element 
+ *	from the array needs to match; 'and' means all elements must match. The default is 'and'.
+ * @param bool|string $field A field from the object to place instead of the entire object
+ * @return array A list of objects or object fields
+ */
+function wp_filter_object_list( $list, $args = array(), $operator = 'and', $field = false ) {
+	if ( !is_array($list) )
+		return array();
+
+	if ( empty($args) )
+		$args = array();
+
+	if ( empty($args) && !$field )
+		return $list;	// nothing to do
+
+	$count = count($args);
+
+	$filtered = array();
+
+	foreach ( $list as $key => $obj ) {
+		$matched = count(array_intersect_assoc(get_object_vars($obj), $args));
+		if ( ('and' == $operator && $matched == $count) || ('or' == $operator && $matched <= $count) )
+			$filtered[$key] = $field ? $obj->$field : $obj;
+	}
+
+	return $filtered;
 }
 
 /**
@@ -3421,7 +3460,7 @@ function get_site_option( $option, $default = false, $use_cache = true ) {
 		if ( $use_cache )
 			$value = wp_cache_get($cache_key, 'site-options');
 
-		if ( false === $value ) {
+		if ( !isset($value) || (false === $value) ) {
 			$value = $wpdb->get_var( $wpdb->prepare("SELECT meta_value FROM $wpdb->sitemeta WHERE meta_key = %s AND site_id = %d", $option, $wpdb->siteid ) );
 
 			if ( is_null($value) )

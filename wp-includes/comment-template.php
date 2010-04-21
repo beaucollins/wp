@@ -432,7 +432,7 @@ function get_comment_excerpt( $comment_ID = 0 ) {
  * @param int $comment_ID The ID of the comment for which to print the excerpt. Optional.
  */
 function comment_excerpt( $comment_ID = 0 ) {
-	echo apply_filters('comment_excerpt', get_comment_excerpt() );
+	echo apply_filters('comment_excerpt', get_comment_excerpt($comment_ID) );
 }
 
 /**
@@ -890,7 +890,7 @@ function comments_template( $file = '/comments.php', $separate_comments = false 
 	elseif ( file_exists( TEMPLATEPATH . $file ) )
 		require( TEMPLATEPATH .  $file );
 	else
-		require( get_theme_root() . '/default/comments.php');
+		require( get_theme_root() . '/'.WP_FALLBACK_THEME.'/comments.php');
 }
 
 /**
@@ -1493,35 +1493,30 @@ function comment_form( $args = array(), $post_id = null ) {
 
 	$req = get_option( 'require_name_email' );
 	$aria_req = ( $req ? " aria-required='true'" : '' );
-	$defaults = array( 'fields' => apply_filters( 'comment_form_default_fields', array( 'author' => '<p class="comment-form-author">' .
-																									'<label for="author">' . __( 'Name' ) . '</label> ' .
-																									( $req ? '<span class="required">*</span>' : '' ) .
-																									'<input id="author" name="author" type="text" value="' . esc_attr( $commenter['comment_author'] ) . '" size="30" tabindex="1"' . $aria_req . ' />' .
-																									'</p><!-- #form-section-author .form-section -->',
-																							'email' => '<p class="comment-form-email">' .
-																										'<label for="email">' . __( 'Email' ) . '</label> ' .
-																										( $req ? '<span class="required">*</span>' : '' ) .
-																										'<input id="email" name="email" type="text" value="' . esc_attr(  $commenter['comment_author_email'] ) . '" size="30" tabindex="2"' . $aria_req . ' />' .
-																										'</p><!-- #form-section-email .form-section -->',
-																							'url' => '<p class="comment-form-url">' .
-																										'<label for="url">' . __( 'Website' ) . '</label>' .
-																										'<input id="url" name="url" type="text" value="' . esc_attr( $commenter['comment_author_url'] ) . '" size="30" tabindex="3" />' .
-																										'</p><!-- #form-section-url .form-section -->' ) ),
-						'comment_field' => '<p class="comment-form-comment">' .
-												'<label for="comment">' . __( 'Comment' ) . '</label>' .
-												'<textarea id="comment" name="comment" cols="45" rows="8" tabindex="4" aria-required="true"></textarea>' .
-											'</p><!-- #form-section-comment .form-section -->',
-						'must_log_in' => '<p class="must-log-in">' .  sprintf( __( 'You must be <a href="%s">logged in</a> to post a comment.' ), wp_login_url( apply_filters( 'the_permalink', get_permalink( $post_id ) ) ) ) . '</p>',
-						'logged_in_as' => '<p class="logged-in-as">' . sprintf( __( 'Logged in as <a href="%s">%s</a>. <a href="%s" title="Log out of this account">Log out?</a></p>' ), admin_url( 'profile.php' ), $user_identity, wp_logout_url( apply_filters( 'the_permalink', get_permalink( $post_id ) ) ) ),
-						'comment_notes_before' => '<p class="comment-notes">' . __( 'Your email is <em>never</em> published nor shared.' ) . ( $req ? __( ' Required fields are marked <span class="required">*</span>' ) : '' ) . '</p>',
-						'comment_notes_after' => '<dl class="form-allowed-tags"><dt>' . __( 'You may use these <abbr title="HyperText Markup Language">HTML</abbr> tags and attributes:' ) . '</dt> <dd><code>' . allowed_tags() . '</code></dd></dl>',
-						'id_form' => 'commentform',
-						'id_submit' => 'submit',
-						'title_reply' => __( 'Leave a Reply' ),
-						'title_reply_to' => __( 'Leave a Reply to %s' ),
-						'cancel_reply_link' => __( 'Cancel reply' ),
-						'label_submit' => __( 'Post Comment' ),
-				);
+	$fields =  array(
+		'author' => '<p class="comment-form-author">' . '<label for="author">' . __( 'Name' ) . '</label> ' . ( $req ? '<span class="required">*</span>' : '' ) .
+		            '<input id="author" name="author" type="text" value="' . esc_attr( $commenter['comment_author'] ) . '" size="30"' . $aria_req . ' /></p>',
+		'email'  => '<p class="comment-form-email"><label for="email">' . __( 'Email' ) . '</label> ' . ( $req ? '<span class="required">*</span>' : '' ) .
+		            '<input id="email" name="email" type="text" value="' . esc_attr(  $commenter['comment_author_email'] ) . '" size="30"' . $aria_req . ' /></p>',
+		'url'    => '<p class="comment-form-url"><label for="url">' . __( 'Website' ) . '</label>' .
+		            '<input id="url" name="url" type="text" value="' . esc_attr( $commenter['comment_author_url'] ) . '" size="30" /></p>',
+	);
+
+	$defaults = array(
+		'fields'               => apply_filters( 'comment_form_default_fields', $fields ),
+		'comment_field'        => '<p class="comment-form-comment"><label for="comment">' . _x( 'Comment', 'noun' ) . '</label><textarea id="comment" name="comment" cols="45" rows="8" aria-required="true"></textarea></p>',
+		'must_log_in'          => '<p class="must-log-in">' .  sprintf( __( 'You must be <a href="%s">logged in</a> to post a comment.' ), wp_login_url( apply_filters( 'the_permalink', get_permalink( $post_id ) ) ) ) . '</p>',
+		'logged_in_as'         => '<p class="logged-in-as">' . sprintf( __( 'Logged in as <a href="%1$s">%2$s</a>. <a href="%3$s" title="Log out of this account">Log out?</a>' ), admin_url( 'profile.php' ), $user_identity, wp_logout_url( apply_filters( 'the_permalink', get_permalink( $post_id ) ) ) ) . '</p>',
+		'comment_notes_before' => '<p class="comment-notes">' . __( 'Your email will not be published.' ) . ( $req ? __( ' Required fields are marked <span class="required">*</span>' ) : '' ) . '</p>',
+		'comment_notes_after'  => '<dl class="form-allowed-tags"><dt>' . __( 'You may use these <abbr title="HyperText Markup Language">HTML</abbr> tags and attributes:' ) . '</dt> <dd><code>' . allowed_tags() . '</code></dd></dl>',
+		'id_form'              => 'commentform',
+		'id_submit'            => 'submit',
+		'title_reply'          => __( 'Leave a Reply' ),
+		'title_reply_to'       => __( 'Leave a Reply to %s' ),
+		'cancel_reply_link'    => __( 'Cancel reply' ),
+		'label_submit'         => __( 'Post Comment' ),
+	);
+
 	$args = wp_parse_args( $args, apply_filters( 'comment_form_defaults', $defaults ) );
 
 	?>
@@ -1551,13 +1546,13 @@ function comment_form( $args = array(), $post_id = null ) {
 						<?php echo apply_filters( 'comment_form_field_comment', $args['comment_field'] ); ?>
 						<?php echo $args['comment_notes_after']; ?>
 						<p class="form-submit">
-							<input name="submit" type="submit" id="<?php echo esc_attr( $args['id_submit'] ); ?>" tabindex="<?php echo ( count( $args['fields'] ) + 2 ); ?>" value="<?php echo esc_attr( $args['label_submit'] ); ?>" />
+							<input name="submit" type="submit" id="<?php echo esc_attr( $args['id_submit'] ); ?>" value="<?php echo esc_attr( $args['label_submit'] ); ?>" />
 							<?php comment_id_fields(); ?>
 						</p>
 						<?php do_action( 'comment_form', $post_id ); ?>
 					</form>
 				<?php endif; ?>
-			</div>
+			</div><!-- #respond -->
 			<?php do_action( 'comment_form_after' ); ?>
 		<?php else : ?>
 			<?php do_action( 'comment_form_comments_closed' ); ?>

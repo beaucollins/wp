@@ -44,16 +44,15 @@ function _wp_translate_postdata( $update = false, $post_data = null ) {
 		}
 	}
 
+	$ptype = get_post_type_object( $post_data['post_type'] );
 	if ( isset($post_data['user_ID']) && ($post_data['post_author'] != $post_data['user_ID']) ) {
-		if ( 'page' == $post_data['post_type'] ) {
-			if ( !current_user_can( 'edit_others_pages' ) ) {
+		if ( !current_user_can( $ptype->edit_others_cap ) ) {
+			if ( 'page' == $post_data['post_type'] ) {
 				return new WP_Error( 'edit_others_pages', $update ?
 					__( 'You are not allowed to edit pages as this user.' ) :
 					__( 'You are not allowed to create pages as this user.' )
 				);
-			}
-		} else {
-			if ( !current_user_can( 'edit_others_posts' ) ) {
+			} else {
 				return new WP_Error( 'edit_others_posts', $update ?
 					__( 'You are not allowed to edit posts as this user.' ) :
 					__( 'You are not allowed to post as this user.' )
@@ -82,15 +81,8 @@ function _wp_translate_postdata( $update = false, $post_data = null ) {
 
 	// Posts 'submitted for approval' present are submitted to $_POST the same as if they were being published.
 	// Change status from 'publish' to 'pending' if user lacks permissions to publish or to resave published posts.
-	if ( isset( $post_data['post_type'] ) && 'page' == $post_data['post_type'] ) {
-		$publish_cap = 'publish_pages';
-		$edit_cap = 'edit_published_pages';
-	} else {
-		$publish_cap = 'publish_posts';
-		$edit_cap = 'edit_published_posts';
-	}
-	if ( isset($post_data['post_status']) && ('publish' == $post_data['post_status'] && !current_user_can( $publish_cap )) )
-		if ( $previous_status != 'publish' || !current_user_can( $edit_cap ) )
+	if ( isset($post_data['post_status']) && ('publish' == $post_data['post_status'] && !current_user_can( $ptype->publish_cap )) )
+		if ( $previous_status != 'publish' || !current_user_can( 'edit_post', $post_id ) )
 			$post_data['post_status'] = 'pending';
 
 	if ( ! isset($post_data['post_status']) )
@@ -276,8 +268,7 @@ function bulk_edit_posts( $post_data = null ) {
 		foreach ( $post_data['tax_input'] as $tax_name => $terms ) {
 			if ( empty($terms) )
 				continue;
-			$taxonomy = get_taxonomy( $tax_name );
-			if ( $taxonomy->hierarchical )
+			if ( is_taxonomy_hierarchical( $tax_name ) )
 				$tax_input[$tax_name] = array_map( 'absint', $terms );
 			else {
 				$tax_input[$tax_name] = preg_replace( '/\s*,\s*/', ',', rtrim( trim($terms), ' ,' ) );
@@ -324,8 +315,7 @@ function bulk_edit_posts( $post_data = null ) {
 
 		foreach ( $tax_names as $tax_name ) {
 			if( isset( $tax_input[$tax_name])  ) {
-				$taxonomy = get_taxonomy( $tax_name );
-				if( $taxonomy->hierarchical )
+				if ( is_taxonomy_hierarchical( $tax_name ) )
 					$terms = (array) wp_get_object_terms( $post_ID, $tax_name, array('fields' => 'ids') );
 				else
 					$terms = (array) wp_get_object_terms( $post_ID, $tax_name, array('fields' => 'names') );
@@ -869,7 +859,6 @@ function wp_edit_posts_query( $q = false ) {
 		$post_type = $q['post_type'];
 	else
 		$post_type = 'post';
-	$post_type_object = get_post_type_object($post_type);
 
 	$avail_post_stati = get_available_post_statuses($post_type);
 
@@ -899,7 +888,7 @@ function wp_edit_posts_query( $q = false ) {
 	$query = compact('post_type', 'post_status', 'perm', 'order', 'orderby', 'posts_per_page');
 
 	// Hierarchical types require special args.
-	if ( $post_type_object->hierarchical ) {
+	if ( is_post_type_hierarchical( $post_type ) ) {
 		$query['orderby'] = 'menu_order title';
 		$query['order'] = 'asc';
 		$query['posts_per_page'] = -1;
@@ -1027,19 +1016,19 @@ function get_sample_permalink($id, $title = null, $name = null) {
 		$post->post_name = sanitize_title($post->post_name ? $post->post_name : $post->post_title, $post->ID);
 	}
 
-	$post->post_name = wp_unique_post_slug($post->post_name, $post->ID, $post->post_status, $post->post_type, $post->post_parent);
-
 	// If the user wants to set a new name -- override the current one
 	// Note: if empty name is supplied -- use the title instead, see #6072
 	if ( !is_null($name) )
 		$post->post_name = sanitize_title($name ? $name : $title, $post->ID);
 
+	$post->post_name = wp_unique_post_slug($post->post_name, $post->ID, $post->post_status, $post->post_type, $post->post_parent);
+
 	$post->filter = 'sample';
 
 	$permalink = get_permalink($post, true);
 
-	if ( $ptype->query_var ) // Replace custom post_type Token with generic pagename token for ease of use.
-		$permalink = str_replace('%' . $ptype->query_var . '%', '%pagename%', $permalink);
+	// Replace custom post_type Token with generic pagename token for ease of use.
+	$permalink = str_replace("%$post->post_type%", '%pagename%', $permalink);
 
 	// Handle page hierarchy
 	if ( $ptype->hierarchical ) {
@@ -1144,7 +1133,7 @@ function get_sample_permalink_html( $id, $new_title = null, $new_slug = null ) {
 function _wp_post_thumbnail_html( $thumbnail_id = NULL ) {
 	global $content_width, $_wp_additional_image_sizes;
 
-	$set_thumbnail_link = '<p class="hide-if-no-js"><a href="' . get_upload_iframe_src('image') . '" id="set-post-thumbnail" class="thickbox">%s</a></p>';
+	$set_thumbnail_link = '<p class="hide-if-no-js"><a title="' . esc_attr__( 'Set featured image' ) . '" href="' . get_upload_iframe_src('image') . '" id="set-post-thumbnail" class="thickbox">%s</a></p>';
 	$content = sprintf($set_thumbnail_link, esc_html__( 'Set featured image' ));
 
 	if ( $thumbnail_id && get_post( $thumbnail_id ) ) {

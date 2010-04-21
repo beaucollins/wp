@@ -10,6 +10,19 @@
 if ( !defined('ABSPATH') )
 	die('-1');
 
+wp_enqueue_script('post');
+
+if ( post_type_supports($post_type, 'editor') ) {
+	if ( user_can_richedit() )
+		wp_enqueue_script('editor');
+	wp_enqueue_script('word-count');
+}
+
+if ( post_type_supports($post_type, 'editor') || post_type_supports($post_type, 'thumbnail') ) {
+	add_thickbox();
+	wp_enqueue_script('media-upload');
+}
+
 /**
  * Post ID global
  * @name $post_ID
@@ -23,32 +36,32 @@ $action = isset($action) ? $action : '';
 $messages = array();
 $messages['post'] = array(
 	'',
-	sprintf( __('Post updated. <a href="%s">View post</a>'), get_permalink($post_ID) ),
+	sprintf( __('Post updated. <a href="%s">View post</a>'), esc_url( get_permalink($post_ID) ) ),
 	__('Custom field updated.'),
 	__('Custom field deleted.'),
 	__('Post updated.'),
 	/* translators: %s: date and time of the revision */
 	isset($_GET['revision']) ? sprintf( __('Post restored to revision from %s'), wp_post_revision_title( (int) $_GET['revision'], false ) ) : false,
-	sprintf( __('Post published. <a href="%s">View post</a>'), get_permalink($post_ID) ),
+	sprintf( __('Post published. <a href="%s">View post</a>'), esc_url( get_permalink($post_ID) ) ),
 	__('Post saved.'),
-	sprintf( __('Post submitted. <a target="_blank" href="%s">Preview post</a>'), add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ),
+	sprintf( __('Post submitted. <a target="_blank" href="%s">Preview post</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ) ),
 	sprintf( __('Post scheduled for: <strong>%1$s</strong>. <a target="_blank" href="%2$s">Preview post</a>'),
 		// translators: Publish box date format, see http://php.net/date
-		date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ), get_permalink($post_ID) ),
-	sprintf( __('Post draft updated. <a target="_blank" href="%s">Preview post</a>'), add_query_arg( 'preview', 'true', get_permalink($post_ID) ) )
+		date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ), esc_url( get_permalink($post_ID) ) ),
+	sprintf( __('Post draft updated. <a target="_blank" href="%s">Preview post</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ) ),
 );
 $messages['page'] = array(
 	'',
-	sprintf( __('Page updated. <a href="%s">View page</a>'), get_permalink($post_ID) ),
+	sprintf( __('Page updated. <a href="%s">View page</a>'), esc_url( get_permalink($post_ID) ) ),
 	__('Custom field updated.'),
 	__('Custom field deleted.'),
 	__('Page updated.'),
 	isset($_GET['revision']) ? sprintf( __('Page restored to revision from %s'), wp_post_revision_title( (int) $_GET['revision'], false ) ) : false,
-	sprintf( __('Page published. <a href="%s">View page</a>'), get_permalink($post_ID) ),
+	sprintf( __('Page published. <a href="%s">View page</a>'), esc_url( get_permalink($post_ID) ) ),
 	__('Page saved.'),
-	sprintf( __('Page submitted. <a target="_blank" href="%s">Preview page</a>'), add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ),
-	sprintf( __('Page scheduled for: <strong>%1$s</strong>. <a target="_blank" href="%2$s">Preview page</a>'), date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ), get_permalink($post_ID) ),
-	sprintf( __('Page draft updated. <a target="_blank" href="%s">Preview page</a>'), add_query_arg( 'preview', 'true', get_permalink($post_ID) ) )
+	sprintf( __('Page submitted. <a target="_blank" href="%s">Preview page</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ) ),
+	sprintf( __('Page scheduled for: <strong>%1$s</strong>. <a target="_blank" href="%2$s">Preview page</a>'), date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ), esc_url( get_permalink($post_ID) ) ),
+	sprintf( __('Page draft updated. <a target="_blank" href="%s">Preview page</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ) ),
 );
 
 $message = false;
@@ -89,7 +102,7 @@ if ( $autosave && mysql2date( 'U', $autosave->post_modified_gmt, false ) > mysql
 $post_type_object = get_post_type_object($post_type);
 
 // All meta boxes should be defined and added before the first do_meta_boxes() call (or potentially during the do_meta_boxes action).
-require_once('includes/meta-boxes.php');
+require_once('./includes/meta-boxes.php');
 
 add_meta_box('submitdiv', __('Publish'), 'post_submit_meta_box', $post_type, 'side', 'core');
 
@@ -152,7 +165,7 @@ do_action('do_meta_boxes', $post_type, 'side', $post);
 
 add_contextual_help($current_screen, drag_drop_help());
 
-require_once('admin-header.php');
+require_once('./admin-header.php');
 ?>
 
 <div class="wrap">
@@ -164,7 +177,7 @@ require_once('admin-header.php');
 <?php if ( $message ) : ?>
 <div id="message" class="updated"><p><?php echo $message; ?></p></div>
 <?php endif; ?>
-<form name="post" action="post.php" method="post" id="post">
+<form name="post" action="post.php" method="post" id="post"<?php do_action('post_edit_form_tag'); ?>>
 <?php wp_nonce_field($nonce_action); ?>
 <input type="hidden" id="user-id" name="user_ID" value="<?php echo (int) $user_ID ?>" />
 <input type="hidden" id="hiddenaction" name="action" value="<?php echo esc_attr($form_action) ?>" />
@@ -172,12 +185,17 @@ require_once('admin-header.php');
 <input type="hidden" id="post_author" name="post_author" value="<?php echo esc_attr( $post->post_author ); ?>" />
 <input type="hidden" id="post_type" name="post_type" value="<?php echo esc_attr($post_type) ?>" />
 <input type="hidden" id="original_post_status" name="original_post_status" value="<?php echo esc_attr($post->post_status) ?>" />
-<input name="referredby" type="hidden" id="referredby" value="<?php echo esc_url(stripslashes(wp_get_referer())); ?>" />
+<input type="hidden" id="referredby" name="referredby" value="<?php echo esc_url(stripslashes(wp_get_referer())); ?>" />
 <?php
 if ( 'draft' != $post->post_status )
 	wp_original_referer_field(true, 'previous');
 
-echo $form_extra ?>
+echo $form_extra;
+
+wp_nonce_field( 'autosave', 'autosavenonce', false );
+wp_nonce_field( 'meta-box-order', 'meta-box-order-nonce', false );
+wp_nonce_field( 'closedpostboxes', 'closedpostboxesnonce', false );
+?>
 
 <div id="poststuff" class="metabox-holder<?php echo 2 == $screen_layout_columns ? ' has-right-sidebar' : ''; ?>">
 <div id="side-info-column" class="inner-sidebar">
@@ -214,6 +232,9 @@ if ( !( 'pending' == $post->post_status && !current_user_can( $post_type_object-
 }
 ?>
 </div>
+<?php
+wp_nonce_field( 'samplepermalink', 'samplepermalinknonce', false );
+?>
 </div>
 <?php } ?>
 
@@ -240,12 +261,6 @@ if ( !( 'pending' == $post->post_status && !current_user_can( $post_type_object-
 	</td>
 </tr></tbody></table>
 
-<?php
-wp_nonce_field( 'autosave', 'autosavenonce', false );
-wp_nonce_field( 'closedpostboxes', 'closedpostboxesnonce', false );
-wp_nonce_field( 'getpermalink', 'getpermalinknonce', false );
-wp_nonce_field( 'samplepermalink', 'samplepermalinknonce', false );
-wp_nonce_field( 'meta-box-order', 'meta-box-order-nonce', false ); ?>
 </div>
 
 <?php

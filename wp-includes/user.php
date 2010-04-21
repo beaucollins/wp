@@ -418,7 +418,12 @@ function count_users($strategy = 'time') {
 	$blog_prefix = $wpdb->get_blog_prefix($id);
 	$result = array();
 
-	if ('time' == $strategy) {
+	if ( 'time' == $strategy ) {
+		global $wp_roles;
+
+		if ( ! isset( $wp_roles ) )
+			$wp_roles = new WP_Roles();
+
 		$avail_roles = $wp_roles->get_names();
 
 		// Build a CPU-intensive query that will return concise information.
@@ -478,8 +483,7 @@ function count_users($strategy = 'time') {
 /**
  * Set up global user vars.
  *
- * Used by set_current_user() for back compat. Might be deprecated in the
- * future.
+ * Used by wp_set_current_user() for back compat. Might be deprecated in the future.
  *
  * @since 2.0.4
  * @global string $userdata User description.

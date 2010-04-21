@@ -116,6 +116,13 @@ function create_initial_post_types() {
 											'_builtin' => true, /* internal use only. */
 											'label_count' => _n_noop('Auto-Draft <span class="count">(%s)</span>', 'Auto-Drafts <span class="count">(%s)</span>')
 										) );
+
+	register_post_status( 'inherit', array(	'label' => _x('Inherit', 'post'),
+											'internal' => true,
+											'exclude_from_search' => false,
+											'_builtin' => true, /* internal use only. */
+											'label_count' => _n_noop('Inherit <span class="count">(%s)</span>', 'Inherit <span class="count">(%s)</span>')
+										) );
 }
 add_action( 'init', 'create_initial_post_types', 0 ); // highest priority
 
@@ -462,14 +469,17 @@ function get_post_mime_type($ID = '') {
 function get_post_status($ID = '') {
 	$post = get_post($ID);
 
-	if ( is_object($post) ) {
-		if ( ('attachment' == $post->post_type) && $post->post_parent && ($post->ID != $post->post_parent) )
-			return get_post_status($post->post_parent);
-		else
-			return $post->post_status;
-	}
+	if ( !is_object($post) )
+		return false;
 
-	return false;
+	// Unattached attachments are assumed to be published.
+	if ( ('attachment' == $post->post_type) && ('inherit' == $post->post_status) && ( 0 == $post->post_parent) )
+		return 'publish';
+
+	if ( ('attachment' == $post->post_type) && $post->post_parent && ($post->ID != $post->post_parent) )
+		return get_post_status($post->post_parent);
+
+	return $post->post_status;
 }
 
 /**
@@ -622,42 +632,18 @@ function get_post_status_object( $post_status ) {
  * @see register_post_status
  * @see get_post_status_object
  *
- * @param array|string $args An array of key => value arguments to match against the post statuses.
- *  Only post statuses having attributes that match all arguments are returned.
+ * @param array|string $args An array of key => value arguments to match against the post status objects.
  * @param string $output The type of output to return, either post status 'names' or 'objects'. 'names' is the default.
- * @param string $operator Whether the elements in $args should be logicallly 'or'ed or 'and'ed together. 'or' means only one element from the array needs to match. 'and' means all elements must match. The default is 'or'.
+ * @param string $operator The logical operation to perform. 'or' means only one element 
+ *  from the array needs to match; 'and' means all elements must match. The default is 'and'.
  * @return array A list of post type names or objects
  */
-function get_post_stati( $args = array(), $output = 'names', $operator = 'or' ) {
+function get_post_stati( $args = array(), $output = 'names', $operator = 'and' ) {
 	global $wp_post_statuses;
 
-	$do_names = false;
-	if ( 'names' == $output )
-		$do_names = true;
+	$field = ('names' == $output) ? 'name' : false;
 
-	if ( 'and' == $operator )
-		$arg_count = count($args);
-	else
-		$arg_count = 0;
-
-	$post_statuses = array();
-	foreach ( (array) $wp_post_statuses as $post_status ) {
-		if ( empty($args) ) {
-			if ( $do_names )
-				$post_statuses[] = $post_status->name;
-			else
-				$post_statuses[] = $post_status;
-		} elseif ( $intersect = array_intersect_assoc((array) $post_status, $args) ) {
-			if ( $arg_count && ( $arg_count != count($intersect) ) )
-				continue;
-			if ( $do_names )
-				$post_statuses[] = $post_status->name;
-			else
-				$post_statuses[] = $post_status;
-		}
-	}
-
-	return $post_statuses;
+	return wp_filter_object_list($wp_post_statuses, $args, $operator, $field);
 }
 
 /**
@@ -683,6 +669,21 @@ function is_post_type_hierarchical( $post = false ) {
 }
 
 /**
+ * Checks if a post type is registered, can also check if the current or specified post is of a post type.
+ *
+ * @since 3.0.0
+ * @uses get_post_type()
+ *
+ * @param string|array $types Type or types to check. Defaults to all post types.
+ * @param int $id Post ID. Defaults to current ID.
+ * @return bool
+ */
+function is_post_type( $types = false, $id = false ) {
+	$types = ( $types === false ) ? get_post_types() : (array) $types;
+	return in_array( get_post_type( $id ), $types );
+}
+
+/**
  * Retrieve the post type of the current post or of a given post.
  *
  * @since 2.1.0
@@ -692,7 +693,7 @@ function is_post_type_hierarchical( $post = false ) {
  * @param mixed $the_post Optional. Post object or post ID.
  * @return bool|string post type or false on failure.
  */
-function get_post_type($the_post = false) {
+function get_post_type( $the_post = false ) {
 	global $post;
 
 	if ( false === $the_post )
@@ -736,36 +737,19 @@ function get_post_type_object( $post_type ) {
  * @since 2.9.0
  * @uses $wp_post_types
  * @see register_post_type
- * @see get_post_types
  *
- * @param array|string $args An array of key => value arguments to match against the post types.
- *  Only post types having attributes that match all arguments are returned.
+ * @param array|string $args An array of key => value arguments to match against the post type objects.
  * @param string $output The type of output to return, either post type 'names' or 'objects'. 'names' is the default.
+ * @param string $operator The logical operation to perform. 'or' means only one element 
+ *  from the array needs to match; 'and' means all elements must match. The default is 'and'.
  * @return array A list of post type names or objects
  */
-function get_post_types( $args = array(), $output = 'names' ) {
+function get_post_types( $args = array(), $output = 'names', $operator = 'and' ) {
 	global $wp_post_types;
 
-	$do_names = false;
-	if ( 'names' == $output )
-		$do_names = true;
+	$field = ('names' == $output) ? 'name' : false;
 
-	$post_types = array();
-	foreach ( (array) $wp_post_types as $post_type ) {
-		if ( empty($args) ) {
-			if ( $do_names )
-				$post_types[] = $post_type->name;
-			else
-				$post_types[] = $post_type;
-		} elseif ( array_intersect_assoc((array) $post_type, $args) ) {
-			if ( $do_names )
-				$post_types[] = $post_type->name;
-			else
-				$post_types[] = $post_type;
-		}
-	}
-
-	return $post_types;
+	return wp_filter_object_list($wp_post_types, $args, $operator, $field);
 }
 
 /**
@@ -1025,8 +1009,8 @@ function get_posts($args = null) {
 	$defaults = array(
 		'numberposts' => 5, 'offset' => 0,
 		'category' => 0, 'orderby' => 'post_date',
-		'order' => 'DESC', 'include' => '',
-		'exclude' => '', 'meta_key' => '',
+		'order' => 'DESC', 'include' => array(),
+		'exclude' => array(), 'meta_key' => '',
 		'meta_value' =>'', 'post_type' => 'post',
 		'suppress_filters' => true
 	);
@@ -1039,11 +1023,11 @@ function get_posts($args = null) {
 	if ( ! empty($r['category']) )
 		$r['cat'] = $r['category'];
 	if ( ! empty($r['include']) ) {
-		$incposts = preg_split('/[\s,]+/',$r['include']);
+		$incposts = wp_parse_id_list( $r['include'] );
 		$r['posts_per_page'] = count($incposts);  // only the number of posts included
 		$r['post__in'] = $incposts;
 	} elseif ( ! empty($r['exclude']) )
-		$r['post__not_in'] = preg_split('/[\s,]+/',$r['exclude']);
+		$r['post__not_in'] = wp_parse_id_list( $r['exclude'] );
 
 	$r['caller_get_posts'] = true;
 
@@ -2098,10 +2082,6 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 			$post_category = array();
 	}
 
-	// Set the default tag list
-	if ( !isset($tags_input) )
-		$tags_input = array();
-
 	if ( empty($post_author) )
 		$post_author = $user_ID;
 
@@ -2247,7 +2227,7 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 
 	wp_set_post_categories( $post_ID, $post_category );
 	// old-style tags_input
-	if ( !empty($tags_input) )
+	if ( isset( $tags_input ) )
 		wp_set_post_tags( $post_ID, $tags_input );
 	// new-style support for all tag-like taxonomies
 	if ( !empty($tax_input) ) {
@@ -2545,8 +2525,7 @@ function wp_set_post_terms( $post_id = 0, $tags = '', $taxonomy = 'post_tag', $a
 
 	// Hierarchical taxonomies must always pass IDs rather than names so that children with the same
 	// names but different parents aren't confused.
-	$taxonomy_obj = get_taxonomy( $taxonomy );
-	if ( $taxonomy_obj->hierarchical ) {
+	if ( is_taxonomy_hierarchical( $taxonomy ) ) {
 		$tags = array_map( 'intval', $tags );
 		$tags = array_unique( $tags );
 	}
@@ -2969,7 +2948,7 @@ function &get_pages($args = '') {
 	$defaults = array(
 		'child_of' => 0, 'sort_order' => 'ASC',
 		'sort_column' => 'post_title', 'hierarchical' => 1,
-		'exclude' => '', 'include' => '',
+		'exclude' => array(), 'include' => array(),
 		'meta_key' => '', 'meta_value' => '',
 		'authors' => '', 'parent' => -1, 'exclude_tree' => '',
 		'number' => '', 'offset' => 0,
@@ -3010,8 +2989,8 @@ function &get_pages($args = '') {
 		$meta_key = '';
 		$meta_value = '';
 		$hierarchical = false;
-		$incpages = preg_split('/[\s,]+/',$include);
-		if ( count($incpages) ) {
+		$incpages = wp_parse_id_list( $include );
+		if ( ! empty( $incpages ) ) {
 			foreach ( $incpages as $incpage ) {
 				if (empty($inclusions))
 					$inclusions = $wpdb->prepare(' AND ( ID = %d ', $incpage);
@@ -3025,8 +3004,8 @@ function &get_pages($args = '') {
 
 	$exclusions = '';
 	if ( !empty($exclude) ) {
-		$expages = preg_split('/[\s,]+/',$exclude);
-		if ( count($expages) ) {
+		$expages = wp_parse_id_list( $exclude );
+		if ( ! empty( $expages ) ) {
 			foreach ( $expages as $expage ) {
 				if (empty($exclusions))
 					$exclusions = $wpdb->prepare(' AND ( ID <> %d ', $expage);
@@ -3042,7 +3021,7 @@ function &get_pages($args = '') {
 	if (!empty($authors)) {
 		$post_authors = preg_split('/[\s,]+/',$authors);
 
-		if ( count($post_authors) ) {
+		if ( ! empty( $post_authors ) ) {
 			foreach ( $post_authors as $post_author ) {
 				//Do we have an author id or an author login?
 				if ( 0 == intval($post_author) ) {
