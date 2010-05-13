@@ -188,6 +188,8 @@ function edit_post( $post_data = null ) {
 
 	add_meta( $post_ID );
 
+	update_post_meta( $post_ID, '_edit_last', $GLOBALS['current_user']->ID );
+
 	wp_update_post( $post_data );
 
 	// Reunite any orphaned attachments with their parent
@@ -377,7 +379,11 @@ function get_default_post_to_edit( $post_type = 'post', $create_in_db = false ) 
 		$post->post_status = 'draft';
 		$post->to_ping = '';
 		$post->pinged = '';
-		$post->comment_status = get_option( 'default_comment_status' );
+		if ( 'page' == $post_type ) {
+			$post->comment_status = get_option( 'default_comment_status_page' );
+		} else {
+			$post->comment_status = get_option( 'default_comment_status' );
+		}
 		$post->ping_status = get_option( 'default_ping_status' );
 		$post->post_pingback = get_option( 'default_pingback_flag' );
 		$post->post_category = get_option( 'default_category' );
@@ -484,9 +490,9 @@ function wp_write_post() {
 
 	if ( !current_user_can( $ptype->edit_type_cap ) ) {
 		if ( 'page' == $ptype->name )
-			return new WP_Error( 'edit_pages', __( 'You are not allowed to create pages on this blog.' ) );
+			return new WP_Error( 'edit_pages', __( 'You are not allowed to create pages on this site.' ) );
 		else
-			return new WP_Error( 'edit_posts', __( 'You are not allowed to create posts or drafts on this blog.' ) );
+			return new WP_Error( 'edit_posts', __( 'You are not allowed to create posts or drafts on this site.' ) );
 	}
 
 	// Check for autosave collisions
@@ -537,6 +543,8 @@ function wp_write_post() {
 		return 0;
 
 	add_meta( $post_ID );
+
+	add_post_meta( $post_ID, '_edit_last', $GLOBALS['current_user']->ID );
 
 	// Reunite any orphaned attachments with their parent
 	// Does this need to be udpated? ~ Mark
@@ -1032,7 +1040,7 @@ function get_sample_permalink($id, $title = null, $name = null) {
 
 	// Handle page hierarchy
 	if ( $ptype->hierarchical ) {
-		$uri = get_page_uri($post->ID);
+		$uri = get_page_uri($post);
 		$uri = untrailingslashit($uri);
 		$uri = strrev( stristr( strrev( $uri ), '/' ) );
 		$uri = untrailingslashit($uri);
@@ -1063,7 +1071,9 @@ function get_sample_permalink($id, $title = null, $name = null) {
  * @return string intended to be used for the inplace editor of the permalink post slug on in the post (and page?) editor.
  */
 function get_sample_permalink_html( $id, $new_title = null, $new_slug = null ) {
+	global $wpdb;
 	$post = &get_post($id);
+
 	list($permalink, $post_name) = get_sample_permalink($post->ID, $new_title, $new_slug);
 
 	if ( 'publish' == $post->post_status ) {
@@ -1194,10 +1204,7 @@ function wp_set_post_lock( $post_id ) {
 
 	$now = time();
 
-	if ( !add_post_meta( $post->ID, '_edit_lock', $now, true ) )
-		update_post_meta( $post->ID, '_edit_lock', $now );
-	if ( !add_post_meta( $post->ID, '_edit_last', $current_user->ID, true ) )
-		update_post_meta( $post->ID, '_edit_last', $current_user->ID );
+	update_post_meta( $post->ID, '_edit_lock', $now );
 }
 
 /**

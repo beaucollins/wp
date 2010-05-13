@@ -34,7 +34,7 @@ $parent_file = 'themes.php';
 $help = '<p>' . __('Themes give your WordPress style. Once a theme is installed, you may preview it, activate it or deactivate it here.') . '</p>';
 if ( current_user_can('install_themes') ) {
 	$help .= '<p>' . sprintf(__('You can find additional themes for your site by using the new <a href="%1$s">Theme Browser/Installer</a> functionality or by browsing the <a href="http://wordpress.org/extend/themes/">WordPress Theme Directory</a> directly and installing manually.  To install a theme <em>manually</em>, <a href="%2$s">upload its ZIP archive with the new uploader</a> or copy its folder via FTP into your <code>wp-content/themes</code> directory.'), 'theme-install.php', 'theme-install.php?tab=upload' ) . '</p>';
-	$help .= '<p>' . __('Once a theme is uploaded, you should see it on this page.') . '</p>' ;
+	$help .= '<p>' . __('Once a theme is uploaded, you should see it on this screen.') . '</p>' ;
 }
 
 add_contextual_help($current_screen, $help);
@@ -44,7 +44,7 @@ wp_enqueue_script( 'theme-preview' );
 
 require_once('./admin-header.php');
 if ( is_multisite() && current_user_can('edit_themes') ) {
-	?><div id="message0" class="updated"><p><?php _e('Administrator: new themes must be activated in the <a href="ms-themes.php">Themes Admin</a> page before they appear here.'); ?></p></div><?php
+	?><div id="message0" class="updated"><p><?php printf( __('Administrator: new themes must be activated in the <a href="%s">Network Themes</a> screen before they appear here.'), admin_url( 'ms-themes.php') ); ?></p></div><?php
 }
 ?>
 
@@ -52,14 +52,13 @@ if ( is_multisite() && current_user_can('edit_themes') ) {
 <div id="message1" class="updated"><p><?php _e('The active theme is broken.  Reverting to the default theme.'); ?></p></div>
 <?php elseif ( isset($_GET['activated']) ) :
 		if ( isset($wp_registered_sidebars) && count( (array) $wp_registered_sidebars ) ) { ?>
-<div id="message2" class="updated"><p><?php printf(__('New theme activated. This theme supports widgets, please visit the <a href="%s">widgets settings page</a> to configure them.'), admin_url('widgets.php') ); ?></p></div><?php
+<div id="message2" class="updated"><p><?php printf( __('New theme activated. This theme supports widgets, please visit the <a href="%s">widgets settings</a> screen to configure them.'), admin_url( 'widgets.php' ) ); ?></p></div><?php
 		} else { ?>
-<div id="message2" class="updated"><p><?php printf(__('New theme activated. <a href="%s">Visit site</a>'), get_bloginfo('url') . '/'); ?></p></div><?php
+<div id="message2" class="updated"><p><?php printf( __( 'New theme activated. <a href="%s">Visit site</a>' ), home_url( '/' ) ); ?></p></div><?php
 		}
 	elseif ( isset($_GET['deleted']) ) : ?>
 <div id="message3" class="updated"><p><?php _e('Theme deleted.') ?></p></div>
 <?php endif; ?>
-
 <?php
 $themes = get_allowed_themes();
 $ct = current_theme_info();
@@ -87,54 +86,11 @@ $page_links = paginate_links( array(
 ));
 
 $themes = array_slice( $themes, $start, $per_page );
-
-/**
- * Check if there is an update for a theme available.
- *
- * Will display link, if there is an update available.
- *
- * @since 2.7.0
- *
- * @param object $theme Theme data object.
- * @return bool False if no valid info was passed.
- */
-function theme_update_available( $theme ) {
-	static $themes_update;
-
-	if ( !current_user_can('update_themes' ) )
-		return;
-
-	if ( !isset($themes_update) )
-		$themes_update = get_site_transient('update_themes');
-
-	if ( is_object($theme) && isset($theme->stylesheet) )
-		$stylesheet = $theme->stylesheet;
-	elseif ( is_array($theme) && isset($theme['Stylesheet']) )
-		$stylesheet = $theme['Stylesheet'];
-	else
-		return false; //No valid info passed.
-
-	if ( isset($themes_update->response[ $stylesheet ]) ) {
-		$update = $themes_update->response[ $stylesheet ];
-		$theme_name = is_object($theme) ? $theme->name : (is_array($theme) ? $theme['Name'] : '');
-		$details_url = add_query_arg(array('TB_iframe' => 'true', 'width' => 1024, 'height' => 800), $update['url']); //Theme browser inside WP? replace this, Also, theme preview JS will override this on the available list.
-		$update_url = wp_nonce_url('update.php?action=upgrade-theme&amp;theme=' . urlencode($stylesheet), 'upgrade-theme_' . $stylesheet);
-		$update_onclick = 'onclick="if ( confirm(\'' . esc_js( __("Upgrading this theme will lose any customizations you have made.  'Cancel' to stop, 'OK' to upgrade.") ) . '\') ) {return true;}return false;"';
-
-		if ( ! current_user_can('update_themes') )
-			printf( '<p><strong>' . __('There is a new version of %1$s available. <a href="%2$s" class="thickbox" title="%1$s">View version %3$s Details</a>.') . '</strong></p>', $theme_name, $details_url, $update['new_version']);
-		else if ( empty($update['package']) )
-			printf( '<p><strong>' . __('There is a new version of %1$s available. <a href="%2$s" class="thickbox" title="%1$s">View version %3$s Details</a> <em>automatic upgrade unavailable for this theme</em>.') . '</strong></p>', $theme_name, $details_url, $update['new_version']);
-		else
-			printf( '<p><strong>' . __('There is a new version of %1$s available. <a href="%2$s" class="thickbox" title="%1$s">View version %3$s Details</a> or <a href="%4$s" %5$s>upgrade automatically</a>.') . '</strong></p>', $theme_name, $details_url, $update['new_version'], $update_url, $update_onclick );
-	}
-}
-
 ?>
 
 <div class="wrap">
 <?php screen_icon(); ?>
-<h2><a href="themes.php" class="menu-tabs"><?php echo esc_html( $title ); ?></a><?php if ( current_user_can('install_themes') ) { ?><a href="theme-install.php" class="menu-tabs menu-tab-inactive"><?php echo esc_html_x('Install Themes', 'theme'); ?></a><?php } ?></h2>
+<h2><a href="themes.php" class="nav-tab nav-tab-active"><?php echo esc_html( $title ); ?></a><?php if ( current_user_can('install_themes') ) { ?><a href="theme-install.php" class="nav-tab"><?php echo esc_html_x('Install Themes', 'theme'); ?></a><?php } ?></h2>
 
 <h3><?php _e('Current Theme'); ?></h3>
 <div id="current-theme">

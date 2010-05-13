@@ -57,7 +57,7 @@ wp_debug_mode();
 
 // For an advanced caching plugin to use. Uses a static drop-in because you would only want one.
 if ( WP_CACHE )
-	@include( WP_CONTENT_DIR . '/advanced-cache.php' );
+	WP_DEBUG ? include( WP_CONTENT_DIR . '/advanced-cache.php' ) : @include( WP_CONTENT_DIR . '/advanced-cache.php' );
 
 // Define WP_LANG_DIR if not set.
 wp_set_lang_dir();
@@ -153,16 +153,8 @@ unset( $mu_plugin );
 
 do_action( 'muplugins_loaded' );
 
-// Check site status if multisite.
-if ( is_multisite() ) {
-	if ( true !== ( $file = ms_site_check() ) ) {
-		require( $file );
-		die();
-	}
-	unset($file);
-
+if ( is_multisite() )
 	ms_cookie_constants(  );
-}
 
 // Define constants after multisite is loaded. Cookie-related constants may be overridden in ms_network_cookies().
 wp_cookie_constants( );
@@ -289,6 +281,15 @@ $wp->init();
  * If you wish to plug an action once WP is loaded, use the wp_loaded hook below.
  */
 do_action( 'init' );
+
+// Check site status
+if ( is_multisite() ) {
+	if ( true !== ( $file = ms_site_check() ) ) {
+		require( $file );
+		die();
+	}
+	unset($file);
+}
 
 /**
  * This hook is fired once WP, all plugins, and the theme are fully loaded and instantiated.

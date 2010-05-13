@@ -94,7 +94,7 @@ function display_setup_form( $error = null ) {
 <form id="setup" method="post" action="install.php?step=2">
 	<table class="form-table">
 		<tr>
-			<th scope="row"><label for="weblog_title"><?php _e( 'Blog Title' ); ?></label></th>
+			<th scope="row"><label for="weblog_title"><?php _e( 'Site Title' ); ?></label></th>
 			<td><input name="weblog_title" type="text" id="weblog_title" size="25" value="<?php echo esc_attr( $weblog_title ); ?>" /></td>
 		</tr>
 		<tr>
@@ -104,7 +104,9 @@ function display_setup_form( $error = null ) {
 			if ( $user_table ) {
 				_e('User(s) already exists.');
 			} else {
-				?><input name="user_name" type="text" id="user_login" size="25" value="<?php echo esc_attr( $user_name ); ?>" /><?php
+				?><input name="user_name" type="text" id="user_login" size="25" value="<?php echo esc_attr( sanitize_user( $user_name, true ) ); ?>" />
+				<p><?php _e( 'Usernames can have only alphanumeric characters, spaces, underscores, hyphens, periods and the @ symbol.' ); ?></p>
+			<?php
 			} ?>
 			</td>
 		</tr>
@@ -128,7 +130,7 @@ function display_setup_form( $error = null ) {
 			<p><?php _e( 'Double-check your email address before continuing.' ); ?></p></td>
 		</tr>
 		<tr>
-			<td colspan="2"><label><input type="checkbox" name="blog_public" value="1" <?php checked( $blog_public ); ?> /> <?php _e( 'Allow my blog to appear in search engines like Google and Technorati.' ); ?></label></td>
+			<td colspan="2"><label><input type="checkbox" name="blog_public" value="1" <?php checked( $blog_public ); ?> /> <?php _e( 'Allow my site to appear in search engines like Google and Technorati.' ); ?></label></td>
 		</tr>
 	</table>
 	<p class="step"><input type="submit" name="Submit" value="<?php esc_attr_e( 'Install WordPress' ); ?>" class="button" /></p>
@@ -191,6 +193,9 @@ switch($step) {
 			// TODO: poka-yoke
 			display_setup_form( __('you must provide a valid username.') );
 			$error = true;
+		} elseif ( $user_name != sanitize_user( $user_name, true ) ) {
+			display_setup_form( __('the username you provided has invalid characters.') );
+			$error = true;
 		} elseif ( $admin_password != $admin_password_check ) {
 			// TODO: poka-yoke
 			display_setup_form( __( 'your passwords do not match. Please try again' ) );
@@ -218,7 +223,7 @@ switch($step) {
 <table class="form-table">
 	<tr>
 		<th><?php _e( 'Username' ); ?></th>
-		<td><code><?php echo esc_html($user_name); ?></code></td>
+		<td><code><?php echo esc_html( sanitize_user( $user_name, true ) ); ?></code></td>
 	</tr>
 	<tr>
 		<th><?php _e( 'Password' ); ?></th>

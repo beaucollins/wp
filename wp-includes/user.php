@@ -97,7 +97,7 @@ function wp_authenticate_username_password($user, $username, $password) {
 		if ( !is_super_admin( $userdata->ID ) && isset($userdata->primary_blog) ) {
 			$details = get_blog_details( $userdata->primary_blog );
 			if ( is_object( $details ) && $details->spam == 1 )
-				return new WP_Error('blog_suspended', __('Blog Suspended.'));
+				return new WP_Error('blog_suspended', __('Site Suspended.'));
 		}
 	}
 
@@ -236,15 +236,20 @@ function get_user_option( $option, $user = 0, $deprecated = '' ) {
 	if ( !empty( $deprecated ) )
 		_deprecated_argument( __FUNCTION__, '3.0' );
 
-	if ( empty($user) )
+	if ( empty($user) ) {
 		$user = wp_get_current_user();
-	else
-		$user = get_userdata($user);
+		$user = $user->ID;
+	}
 
-	if ( isset( $user->{$wpdb->prefix . $option} ) ) // Blog specific
-		$result = $user->{$wpdb->prefix . $option};
-	elseif ( isset( $user->{$option} ) ) // User specific and cross-blog
-		$result = $user->{$option};
+	$user = get_userdata($user);
+
+	// Keys used as object vars cannot have dashes.
+	$key = str_replace('-', '', $option);
+
+	if ( isset( $user->{$wpdb->prefix . $key} ) ) // Blog specific
+		$result = $user->{$wpdb->prefix . $key};
+	elseif ( isset( $user->{$key} ) ) // User specific and cross-blog
+		$result = $user->{$key};
 	else
 		$result = false;
 
@@ -257,6 +262,8 @@ function get_user_option( $option, $user = 0, $deprecated = '' ) {
  * User options are just like user metadata except that they have support for
  * global blog options. If the 'global' parameter is false, which it is by default
  * it will prepend the WordPress table prefix to the option name.
+ *
+ * Deletes the user option if $newvalue is empty.
  *
  * @since 2.0.0
  * @uses $wpdb WordPress database object for queries
@@ -272,6 +279,12 @@ function update_user_option( $user_id, $option_name, $newvalue, $global = false 
 
 	if ( !$global )
 		$option_name = $wpdb->prefix . $option_name;
+
+	// For backward compatibility. See differences between update_user_meta() and deprecated update_usermeta().
+	// http://core.trac.wordpress.org/ticket/13088
+	if ( is_null( $newvalue ) || is_scalar( $newvalue ) && empty( $newvalue ) )
+		return delete_user_meta( $user_id, $option_name );
+
 	return update_user_meta( $user_id, $option_name, $newvalue );
 }
 
@@ -688,7 +701,9 @@ function _fill_single_user( &$user, &$metavalues ) {
 
 	foreach ( $metavalues as $meta ) {
 		$value = maybe_unserialize($meta->meta_value);
-		$user->{$meta->meta_key} = $value;
+		// Keys used as object vars cannot have dashes.
+		$key = str_replace('-', '', $meta->meta_key);
+		$user->{$key} = $value;
 	}
 
 	$level = $wpdb->prefix . 'user_level';

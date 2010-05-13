@@ -10,8 +10,7 @@
  * Load header template.
  *
  * Includes the header template for a theme or if a name is specified then a
- * specialised header will be included. If the theme contains no header.php file
- * then the header from the WP_FALLBACK_THEME theme will be included.
+ * specialised header will be included.
  *
  * For the parameter, if the file is called "header-special.php" then specify
  * "special".
@@ -31,16 +30,16 @@ function get_header( $name = null ) {
 
 	$templates[] = "header.php";
 
+	// Backward compat code will be removed in a future release
 	if ('' == locate_template($templates, true))
-		load_template( get_theme_root() . '/'. WP_FALLBACK_THEME. '/header.php');
+		load_template( WPINC . '/theme-compat/header.php');
 }
 
 /**
  * Load footer template.
  *
  * Includes the footer template for a theme or if a name is specified then a
- * specialised footer will be included. If the theme contains no footer.php file
- * then the footer from the default theme will be included.
+ * specialised footer will be included.
  *
  * For the parameter, if the file is called "footer-special.php" then specify
  * "special".
@@ -60,16 +59,16 @@ function get_footer( $name = null ) {
 
 	$templates[] = "footer.php";
 
+	// Backward compat code will be removed in a future release
 	if ('' == locate_template($templates, true))
-		load_template( get_theme_root() . '/' . WP_FALLBACK_THEME . '/footer.php');
+		load_template( WPINC . '/theme-compat/footer.php');
 }
 
 /**
  * Load sidebar template.
  *
  * Includes the sidebar template for a theme or if a name is specified then a
- * specialised sidebar will be included. If the theme contains no sidebar.php
- * file then the sidebar from the default theme will be included.
+ * specialised sidebar will be included.
  *
  * For the parameter, if the file is called "sidebar-special.php" then specify
  * "special".
@@ -89,8 +88,9 @@ function get_sidebar( $name = null ) {
 
 	$templates[] = "sidebar.php";
 
+	// Backward compat code will be removed in a future release
 	if ('' == locate_template($templates, true))
-		load_template( get_theme_root() . '/' . WP_FALLBACK_THEME . '/sidebar.php');
+		load_template( WPINC . '/theme-compat/sidebar.php');
 }
 
 /**
@@ -157,7 +157,7 @@ function get_search_form($echo = true) {
 		return;
 	}
 
-	$form = '<form role="search" method="get" id="searchform" action="' . home_url() . '/" >
+	$form = '<form role="search" method="get" id="searchform" action="' . home_url( '/' ) . '" >
 	<div><label class="screen-reader-text" for="s">' . __('Search for:') . '</label>
 	<input type="text" value="' . get_search_query() . '" name="s" id="s" />
 	<input type="submit" id="searchsubmit" value="'. esc_attr__('Search') .'" />
@@ -398,7 +398,7 @@ function get_bloginfo( $show = '', $filter = 'raw' ) {
 	switch( $show ) {
 		case 'home' : // DEPRECATED
 		case 'siteurl' : // DEPRECATED
-			_deprecated_argument( __FUNCTION__, '2.2', sprintf( __('The <code>%1$s</code> option is deprecated for the family of <code>bloginfo()</code> functions. Use the <code>%2$s</code> option instead.'), $show, 'url' ) );
+			_deprecated_argument( __FUNCTION__, '2.2', sprintf( __('The <code>%s</code> option is deprecated for the family of <code>bloginfo()</code> functions.' ), $show ) . ' ' . sprintf( __( 'Use the <code>%s</code> option instead.' ), 'url'  ) );
 		case 'url' :
 			$output = home_url();
 			break;
@@ -458,11 +458,8 @@ function get_bloginfo( $show = '', $filter = 'raw' ) {
 			$output = str_replace('_', '-', $output);
 			break;
 		case 'text_direction':
-			global $wp_locale;
-			if ( isset( $wp_locale ) )
-				$output = $wp_locale->text_direction;
-			else
-				$output = 'ltr';
+			//_deprecated_argument( __FUNCTION__, '2.2', sprintf( __('The <code>%s</code> option is deprecated for the family of <code>bloginfo()</code> functions.' ), $show ) . ' ' . sprintf( __( 'Use the <code>%s</code> function instead.' ), 'is_rtl()'  ) );
+			return function_exists( 'is_rtl' ) ? is_rtl() : 'ltr';
 			break;
 		case 'name':
 		default:
@@ -909,7 +906,7 @@ function wp_get_archives($args = '') {
 		if ( !isset( $cache[ $key ] ) ) {
 			$arcresults = $wpdb->get_results($query);
 			$cache[ $key ] = $arcresults;
-			wp_cache_add( 'wp_get_archives', $cache, 'general' );
+			wp_cache_set( 'wp_get_archives', $cache, 'general' );
 		} else {
 			$arcresults = $cache[ $key ];
 		}
@@ -931,7 +928,7 @@ function wp_get_archives($args = '') {
 		if ( !isset( $cache[ $key ] ) ) {
 			$arcresults = $wpdb->get_results($query);
 			$cache[ $key ] = $arcresults;
-			wp_cache_add( 'wp_get_archives', $cache, 'general' );
+			wp_cache_set( 'wp_get_archives', $cache, 'general' );
 		} else {
 			$arcresults = $cache[ $key ];
 		}
@@ -952,7 +949,7 @@ function wp_get_archives($args = '') {
 		if ( !isset( $cache[ $key ] ) ) {
 			$arcresults = $wpdb->get_results($query);
 			$cache[ $key ] = $arcresults;
-			wp_cache_add( 'wp_get_archives', $cache, 'general' );
+			wp_cache_set( 'wp_get_archives', $cache, 'general' );
 		} else {
 			$arcresults = $cache[ $key ];
 		}
@@ -968,14 +965,14 @@ function wp_get_archives($args = '') {
 			}
 		}
 	} elseif ( 'weekly' == $type ) {
-		$start_of_week = get_option('start_of_week');
-		$query = "SELECT DISTINCT WEEK(post_date, $start_of_week) AS `week`, YEAR(post_date) AS yr, DATE_FORMAT(post_date, '%Y-%m-%d') AS yyyymmdd, count(ID) as posts FROM $wpdb->posts $join $where GROUP BY WEEK(post_date, $start_of_week), YEAR(post_date) ORDER BY post_date DESC $limit";
+		$week = _wp_mysql_week( '`post_date`' );
+		$query = "SELECT DISTINCT $week AS `week`, YEAR( `post_date` ) AS `yr`, DATE_FORMAT( `post_date`, '%Y-%m-%d' ) AS `yyyymmdd`, count( `ID` ) AS `posts` FROM `$wpdb->posts` $join $where GROUP BY $week, YEAR( `post_date` ) ORDER BY `post_date` DESC $limit";
 		$key = md5($query);
 		$cache = wp_cache_get( 'wp_get_archives' , 'general');
 		if ( !isset( $cache[ $key ] ) ) {
 			$arcresults = $wpdb->get_results($query);
 			$cache[ $key ] = $arcresults;
-			wp_cache_add( 'wp_get_archives', $cache, 'general' );
+			wp_cache_set( 'wp_get_archives', $cache, 'general' );
 		} else {
 			$arcresults = $cache[ $key ];
 		}
@@ -1005,7 +1002,7 @@ function wp_get_archives($args = '') {
 		if ( !isset( $cache[ $key ] ) ) {
 			$arcresults = $wpdb->get_results($query);
 			$cache[ $key ] = $arcresults;
-			wp_cache_add( 'wp_get_archives', $cache, 'general' );
+			wp_cache_set( 'wp_get_archives', $cache, 'general' );
 		} else {
 			$arcresults = $cache[ $key ];
 		}
@@ -1061,10 +1058,12 @@ function get_calendar($initial = true, $echo = true) {
 	$key = md5( $m . $monthnum . $year );
 	if ( $cache = wp_cache_get( 'get_calendar', 'calendar' ) ) {
 		if ( is_array($cache) && isset( $cache[ $key ] ) ) {
-			if ( $echo )
+			if ( $echo ) {
 				echo apply_filters( 'get_calendar',  $cache[$key] );
-			else
+				return;
+			} else {
 				return apply_filters( 'get_calendar',  $cache[$key] );
+			}
 		}
 	}
 
@@ -1872,8 +1871,8 @@ function language_attributes($doctype = 'html') {
 	$attributes = array();
 	$output = '';
 
-	if ( $dir = get_bloginfo('text_direction') )
-		$attributes[] = "dir=\"$dir\"";
+	if ( function_exists( 'is_rtl' ) )
+		$attributes[] = 'dir="' . ( is_rtl() ? 'rtl' : 'ltr' ) . '"';
 
 	if ( $lang = get_bloginfo('language') ) {
 		if ( get_option('html_type') == 'text/html' || $doctype == 'html' )
@@ -2110,7 +2109,7 @@ function wp_admin_css( $file = 'wp-admin', $force_echo = false ) {
 	}
 
 	echo apply_filters( 'wp_admin_css', "<link rel='stylesheet' href='" . esc_url( wp_admin_css_uri( $file ) ) . "' type='text/css' />\n", $file );
-	if ( 'rtl' == get_bloginfo( 'text_direction' ) )
+	if ( is_rtl() )
 		echo apply_filters( 'wp_admin_css', "<link rel='stylesheet' href='" . esc_url( wp_admin_css_uri( "$file-rtl" ) ) . "' type='text/css' />\n", "$file-rtl" );
 }
 

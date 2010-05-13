@@ -7,7 +7,8 @@
  */
 
 @header('Content-Type: ' . get_option('html_type') . '; charset=' . get_option('blog_charset'));
-if (!isset($_GET["page"])) require_once('./admin.php');
+if ( ! defined( 'WP_ADMIN' ) )
+	require_once( './admin.php' );
 
 get_admin_page_title();
 $title = esc_html( strip_tags( $title ) );
@@ -109,8 +110,8 @@ if ( function_exists('mb_strlen') ) {
 	<a href="<?php echo trailingslashit( get_bloginfo( 'url' ) ); ?>" title="<?php esc_attr_e('Visit Site') ?>">
 		<span id="site-title"><?php echo $blog_name ?></span>
 	</a>
-<?php if ( current_user_can('manage_options') && !get_option('blog_public') ): ?>
-	<a id="privacy-on-link" href="options-privacy.php" title="<?php esc_attr_e('Your site is asking search engines not to index its content') ?>"><?php _e('Search Engines Blocked') ?></a>
+<?php if ( current_user_can('manage_options') && '1' != get_option('blog_public') ): ?>
+	<a id="privacy-on-link" href="options-privacy.php" title="<?php echo esc_attr( apply_filters('privacy_on_link_title', __('Your site is asking search engines not to index its content') ) ); ?>"><?php echo apply_filters('privacy_on_link_text', __('Search Engines Blocked') ); ?></a>
 <?php endif; ?>
 </h1>
 

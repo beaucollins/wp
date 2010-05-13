@@ -48,6 +48,7 @@ class WP_Upgrader {
 		$this->strings['fs_no_content_dir'] = __('Unable to locate WordPress Content directory (wp-content).');
 		$this->strings['fs_no_plugins_dir'] = __('Unable to locate WordPress Plugin directory.');
 		$this->strings['fs_no_themes_dir'] = __('Unable to locate WordPress Theme directory.');
+		/* translators: %s: directory name */
 		$this->strings['fs_no_folder'] = __('Unable to locate needed folder (%s).');
 
 		$this->strings['download_failed'] = __('Download failed.');
@@ -985,6 +986,7 @@ class WP_Upgrader_Skin {
 class Plugin_Upgrader_Skin extends WP_Upgrader_Skin {
 	var $plugin = '';
 	var $plugin_active = false;
+	var $plugin_network_active = false;
 
 	function Plugin_Upgrader_Skin($args = array()) {
 		return $this->__construct($args);
@@ -996,7 +998,8 @@ class Plugin_Upgrader_Skin extends WP_Upgrader_Skin {
 
 		$this->plugin = $args['plugin'];
 
-		$this->plugin_active = is_plugin_active($this->plugin);
+		$this->plugin_active = is_plugin_active( $this->plugin );
+		$this->plugin_network_active = is_plugin_active_for_network( $this->plugin );
 
 		parent::__construct($args);
 	}
@@ -1005,7 +1008,7 @@ class Plugin_Upgrader_Skin extends WP_Upgrader_Skin {
 		$this->plugin = $this->upgrader->plugin_info();
 		if ( !empty($this->plugin) && !is_wp_error($this->result) && $this->plugin_active ){
 			show_message(__('Reactivating the plugin&#8230;'));
-			echo '<iframe style="border:0;overflow:hidden" width="100%" height="170px" src="' . wp_nonce_url('update.php?action=activate-plugin&plugin=' . $this->plugin, 'activate-plugin_' . $this->plugin) .'"></iframe>';
+			echo '<iframe style="border:0;overflow:hidden" width="100%" height="170px" src="' . wp_nonce_url('update.php?action=activate-plugin&networkwide=' . $this->plugin_network_active . '&plugin=' . $this->plugin, 'activate-plugin_' . $this->plugin) .'"></iframe>';
 		}
 
 		$update_actions =  array(
@@ -1055,7 +1058,7 @@ class Bulk_Upgrader_Skin extends WP_Upgrader_Skin {
 	function add_strings() {
 		$this->upgrader->strings['skin_update_failed_error'] = __('An error occured while updating %1$s: <strong>%2$s</strong>.');
 		$this->upgrader->strings['skin_update_failed'] = __('The update of %1$s failed.');
-		$this->upgrader->strings['skin_update_successful'] = __('%1$s updated successfully. <a onclick="%2$s" href="#" class="hide-if-no-js"><span>Show Details</span><span class="hidden">Hide Details</span>.</a>');
+		$this->upgrader->strings['skin_update_successful'] = __('%1$s updated successfully.').' <a onclick="%2$s" href="#" class="hide-if-no-js"><span>'.__('Show Details').'</span><span class="hidden">'.__('Hide Details').'</span>.</a>';
 	}
 
 	function feedback($string) {
@@ -1109,7 +1112,7 @@ class Bulk_Upgrader_Skin extends WP_Upgrader_Skin {
 		echo '</p></div>';
 		if ( $this->error || ! $this->result ) {
 			if ( $this->error )
-				echo '<div class="error"><p>' . sprintf($this->upgrader->strings['skin_update_failed'], $title, $this->error) . '</p></div>';
+				echo '<div class="error"><p>' . sprintf($this->upgrader->strings['skin_update_failed_error'], $title, $this->error) . '</p></div>';
 			else
 				echo '<div class="error"><p>' . sprintf($this->upgrader->strings['skin_update_failed'], $title) . '</p></div>';
 
@@ -1212,6 +1215,9 @@ class Plugin_Installer_Skin extends WP_Upgrader_Skin {
 		$install_actions = array(
 			'activate_plugin' => '<a href="' . wp_nonce_url('plugins.php?action=activate&amp;plugin=' . $plugin_file, 'activate-plugin_' . $plugin_file) . '" title="' . esc_attr__('Activate this plugin') . '" target="_parent">' . __('Activate Plugin') . '</a>',
 							);
+
+		if ( is_multisite() && current_user_can( 'manage_network_plugins' ) )
+			$install_actions['network_activate'] = '<a href="' . wp_nonce_url('plugins.php?action=activate&amp;networkwide=1&amp;plugin=' . $plugin_file, 'activate-plugin_' . $plugin_file) . '" title="' . __('Activate this plugin for all sites in this network') . '" target="_parent">' . __('Network Activate') . '</a>'; 
 
 		if ( $this->type == 'web' )
 			$install_actions['plugins_page'] = '<a href="' . admin_url('plugin-install.php') . '" title="' . esc_attr__('Return to Plugin Installer') . '" target="_parent">' . __('Return to Plugin Installer') . '</a>';

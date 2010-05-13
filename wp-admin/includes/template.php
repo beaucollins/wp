@@ -13,9 +13,9 @@
  *
  * @since 2.7
  *
- * Outputs the HTML for the hidden table rows used in Categories, Link Caregories and Tags quick edit.
+ * Outputs the HTML for the hidden table rows used in Categories, Link Categories and Tags quick edit.
  *
- * @param string $type "edit-tags", "categoried" or "edit-link-categories"
+ * @param string $type "edit-tags", "categories" or "edit-link-categories"
  * @param string $taxonomy The taxonomy of the row.
  * @return
  */
@@ -834,7 +834,7 @@ function get_hidden_columns($screen) {
 	if ( is_string($screen) )
 		$screen = convert_to_screen($screen);
 
-	return (array) get_user_option( 'manage-' . $screen->id. '-columns-hidden' );
+	return (array) get_user_option( 'manage' . $screen->id. 'columnshidden' );
 }
 
 /**
@@ -897,7 +897,7 @@ function inline_edit_row( $screen ) {
 
 <?php
 
-if ( post_type_supports( $screen->post_type, 'title' ) ) : 
+if ( post_type_supports( $screen->post_type, 'title' ) ) :
 	if ( $bulk ) : ?>
 		<div id="bulk-title-div">
 			<div id="bulk-titles"></div>
@@ -1031,7 +1031,7 @@ if ( !$bulk ) :
 			</select>
 		</label>
 
-<?php 
+<?php
 	endif; // post_type_supports page-attributes
 endif; // $post_type_object->hierarchical ?>
 
@@ -1812,7 +1812,7 @@ function user_row( $user_object, $style = '', $role = '', $numposts = 0 ) {
 		$short_url = substr( $short_url, 0, 32 ).'...';
 	$checkbox = '';
 	// Check if the user for this row is editable
-	if ( current_user_can( 'edit_user', $user_object->ID ) ) {
+	if ( current_user_can( 'list_users' ) ) {
 		// Set up the user editing link
 		// TODO: make profile/user-edit determination a separate function
 		if ($current_user->ID == $user_object->ID) {
@@ -1823,14 +1823,19 @@ function user_row( $user_object, $style = '', $role = '', $numposts = 0 ) {
 		$edit = "<strong><a href=\"$edit_link\">$user_object->user_login</a></strong><br />";
 
 		// Set up the hover actions for this user
-		$del_cap_type = 'remove';
-		if ( !is_multisite() && current_user_can('delete_users') )
-			$del_cap_type = 'delete';
-
 		$actions = array();
-		$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
-		if ( $current_user->ID != $user_object->ID && current_user_can( $del_cap_type . '_user', $user_object->ID ) )
+
+		if ( current_user_can('edit_user',  $user_object->ID) ) {
+			$edit = "<strong><a href=\"$edit_link\">$user_object->user_login</a></strong><br />";
+			$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
+		} else {
+			$edit = "<strong>$user_object->user_login</strong><br />";
+		}
+
+		if ( !is_multisite() && $current_user->ID != $user_object->ID && current_user_can('delete_user', $user_object->ID) )
 			$actions['delete'] = "<a class='submitdelete' href='" . wp_nonce_url("users.php?action=delete&amp;user=$user_object->ID", 'bulk-users') . "'>" . __('Delete') . "</a>";
+		if ( is_multisite() && $current_user->ID != $user_object->ID && current_user_can('remove_user', $user_object->ID) )
+			$actions['remove'] = "<a class='submitdelete' href='" . wp_nonce_url("users.php?action=remove&amp;user=$user_object->ID", 'bulk-users') . "'>" . __('Remove') . "</a>";
 		$actions = apply_filters('user_row_actions', $actions, $user_object);
 		$action_count = count($actions);
 		$i = 0;
@@ -2105,7 +2110,7 @@ function _wp_comment_row( $comment_id, $mode, $comment_status, $checkbox = true,
 					if ( 'spam' != $the_comment_status && 'trash' != $the_comment_status ) {
 						$actions['spam'] = "<a href='$spam_url' class='delete:the-comment-list:comment-$comment->comment_ID::spam=1 vim-s vim-destructive' title='" . esc_attr__( 'Mark this comment as spam' ) . "'>" . /* translators: mark as spam link */ _x( 'Spam', 'verb' ) . '</a>';
 					} elseif ( 'spam' == $the_comment_status ) {
-						$actions['unspam'] = "<a href='$unspam_url' class='delete:the-comment-list:comment-$comment->comment_ID:66cc66:unspam=1 vim-z vim-destructive'>" . __( 'Not Spam' ) . '</a>';
+						$actions['unspam'] = "<a href='$unspam_url' class='delete:the-comment-list:comment-$comment->comment_ID:66cc66:unspam=1 vim-z vim-destructive'>" . _x( 'Not Spam', 'comment' ) . '</a>';
 					} elseif ( 'trash' == $the_comment_status ) {
 						$actions['untrash'] = "<a href='$untrash_url' class='delete:the-comment-list:comment-$comment->comment_ID:66cc66:untrash=1 vim-z vim-destructive'>" . __( 'Restore' ) . '</a>';
 					}
@@ -2600,18 +2605,6 @@ function parent_dropdown( $default = 0, $parent = 0, $level = 0 ) {
  * {@internal Missing Short Description}}
  *
  * @since unknown
- */
-function browse_happy() {
-	$getit = __( 'WordPress recommends a better browser' );
-	echo '
-		<div id="bh"><a href="http://browsehappy.com/" title="'.$getit.'"><img src="' . esc_url( admin_url( 'images/browse-happy.gif' ) ) . '" alt="Browse Happy" /></a></div>
-';
-}
-
-/**
- * {@internal Missing Short Description}}
- *
- * @since unknown
  *
  * @param unknown_type $id
  * @return unknown
@@ -2883,9 +2876,8 @@ function do_meta_boxes($page, $context, $object) {
 						continue;
 					$i++;
 					$style = '';
-					if ( in_array($box['id'], $hidden) )
-						$style = 'style="display:none;"';
-					echo '<div id="' . $box['id'] . '" class="postbox ' . postbox_classes($box['id'], $page) . '" ' . $style . '>' . "\n";
+					$hidden_class = in_array($box['id'], $hidden) ? ' hide-if-js' : '';
+					echo '<div id="' . $box['id'] . '" class="postbox ' . postbox_classes($box['id'], $page) . $hidden_class . '" ' . '>' . "\n";
 					echo '<div class="handlediv" title="' . __('Click to toggle') . '"><br /></div>';
 					echo "<h3 class='hndle'><span>{$box['title']}</span></h3>\n";
 					echo '<div class="inside">' . "\n";
@@ -3486,11 +3478,9 @@ do_action('admin_print_scripts');
 do_action('admin_head');
 
 $admin_body_class = preg_replace('/[^a-z0-9_-]+/i', '-', $hook_suffix);
-if ( get_user_setting('mfold') == 'f' )
-	$admin_body_class .= ' folded';
 ?>
 </head>
-<body<?php if ( isset($GLOBALS['body_id']) ) echo ' id="' . $GLOBALS['body_id'] . '"'; ?>  class="wp-admin no-js<?php echo apply_filters( 'admin_body_class', '' ) . " $admin_body_class"; ?>">
+<body<?php if ( isset($GLOBALS['body_id']) ) echo ' id="' . $GLOBALS['body_id'] . '"'; ?>  class="no-js <?php echo $admin_body_class; ?>">
 <script type="text/javascript">
 //<![CDATA[
 (function(){
@@ -3591,33 +3581,40 @@ function screen_meta($screen) {
 	if ( !isset($_wp_contextual_help) )
 		$_wp_contextual_help = array();
 
-	$settings = '';
+	$settings = apply_filters('screen_settings', '', $screen);
 
 	switch ( $screen->id ) {
 		case 'widgets':
 			$settings = '<p><a id="access-on" href="widgets.php?widgets-access=on">' . __('Enable accessibility mode') . '</a><a id="access-off" href="widgets.php?widgets-access=off">' . __('Disable accessibility mode') . "</a></p>\n";
-			$show_screen = true;
 			break;
 	}
+	if( $settings )
+		$show_screen = true;
 ?>
 <div id="screen-meta">
 <?php
 	if ( $show_screen ) :
+		$default_text = __('Show on screen');
 ?>
 <div id="screen-options-wrap" class="hidden">
 	<form id="adv-settings" action="" method="post">
-	<h5><?php _e('Show on screen') ?></h5>
-	<div class="metabox-prefs">
-<?php
-	if ( !meta_box_prefs($screen) && isset($column_screens) ) {
-		manage_columns_prefs($screen);
-	}
-?>
-	<br class="clear" />
-	</div>
-<?php echo screen_layout($screen); ?>
-<?php echo $screen_options; ?>
-<?php echo $settings; ?>
+	<?php if ( isset($wp_meta_boxes[$screen->id]) ) : ?>
+		<h5><?php echo apply_filters('meta_box_prefs_header', $default_text); ?></h5>
+		<div class="metabox-prefs">
+			<?php meta_box_prefs($screen); ?>
+			<br class="clear" />
+		</div>
+		<?php endif;
+		if ( isset($column_screens) ) : ?>
+		<h5><?php echo apply_filters('columns_prefs_header', $default_text); ?></h5>
+		<div class="metabox-prefs">
+			<?php manage_columns_prefs($screen); ?>
+			<br class="clear" />
+		</div>
+	<?php endif;
+	echo screen_layout($screen);
+	echo $screen_options;
+	echo $settings; ?>
 <div><?php wp_nonce_field( 'screen-options-nonce', 'screenoptionnonce', false ); ?></div>
 </form>
 </div>

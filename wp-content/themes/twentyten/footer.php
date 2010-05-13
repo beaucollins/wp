@@ -10,7 +10,6 @@
  * @since 3.0.0
  */
 ?>
-
 	</div><!-- #main -->
 
 	<div id="footer">
@@ -19,11 +18,17 @@
 <?php get_sidebar( 'footer' ); ?>
 
 			<div id="site-info">
-				<a href="<?php echo home_url( '/' ) ?>" title="<?php echo esc_attr( get_bloginfo( 'name', 'display' ) ); ?>" rel="home"><?php bloginfo( 'name' ); ?></a>
+				<a href="<?php echo home_url( '/' ) ?>" title="<?php echo esc_attr( get_bloginfo( 'name', 'display' ) ); ?>" rel="home">
+					<?php bloginfo( 'name' ); ?>
+				</a>
 			</div>
 
 			<div id="site-generator">
-				<?php printf( __( 'Proudly powered by <span id="generator-link">%s</span>.', 'twentyten' ), '<a href="http://wordpress.org/" title="' . esc_attr__( 'Semantic Personal Publishing Platform', 'twentyten' ) . '" rel="generator">' . __( 'WordPress', 'twentyten' ) . '</a>' ); ?>
+				<?php do_action( 'twentyten_credits' ); ?>
+				<a href="<?php echo esc_url( __('http://wordpress.org/', 'twentyten') ); ?>"
+						title="<?php esc_attr_e('Semantic Personal Publishing Platform', 'twentyten'); ?>" rel="generator">
+					<?php printf( __('Proudly powered by %s.', 'twentyten'), 'WordPress' ); ?>
+				</a>
 			</div>
 
 		</div><!-- #colophon -->

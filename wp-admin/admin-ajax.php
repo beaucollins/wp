@@ -126,10 +126,20 @@ case 'imgedit-preview' :
 	check_ajax_referer( "image_editor-$post_id" );
 
 	include_once( ABSPATH . 'wp-admin/includes/image-edit.php' );
-	if ( !stream_preview_image($post_id) )
+	if ( ! stream_preview_image($post_id) )
 		die('-1');
 
 	die();
+	break;
+case 'menu-quick-search':
+	if ( ! current_user_can( 'switch_themes' ) )
+		die('-1');
+
+	require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
+
+	_wp_ajax_menu_quick_search( $_REQUEST );
+
+	exit;
 	break;
 case 'oembed-cache' :
 	$return = ( $wp_embed->cache_oembed( $_GET['post'] ) ) ? '1' : '0';
@@ -386,6 +396,17 @@ case 'delete-link' :
 	else
 		die('0');
 	break;
+case 'delete-menu-item' :
+	$menu_item_id = (int) $_POST['menu-item'];
+	check_admin_referer( 'delete-menu_item_' . $menu_item_id );
+	if ( ! current_user_can( 'switch_themes' ) )
+		die('-1');
+
+	if ( is_nav_menu_item( $menu_item_id ) && wp_delete_post( $menu_item_id, true ) )
+		die('1');
+	else
+		die('0');
+	break;
 case 'delete-meta' :
 	check_ajax_referer( "delete-meta_$id" );
 	if ( !$meta = get_post_meta_by_id( $id ) )
@@ -572,9 +593,8 @@ case 'add-tag' : // From Manage->Tags
 			$tag_full_name = $_tag->name . ' &#8212; ' . $tag_full_name;
 			$level++;
 		}
-	}
-	if ( is_taxonomy_hierarchical($taxonomy) )
 		$noparents = _tag_row( $tag, $level, $taxonomy );
+	}
 	$tag->name = $tag_full_name;
 	$parents = _tag_row( $tag, 0, $taxonomy);
 
@@ -796,6 +816,42 @@ case 'edit-comment' :
 
 	$x->send();
 	break;
+case 'add-menu-item' :
+	if ( ! current_user_can( 'switch_themes' ) )
+		die('-1');
+
+	check_admin_referer( 'add-menu_item', 'menu-settings-column-nonce' );
+
+	require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
+
+	$menu_id = (int) $_POST['menu'];
+	if ( isset( $_POST['menu-item'] ) ) {
+		$item_ids = wp_save_nav_menu_item( $menu_id, $_POST['menu-item'] );
+		if ( is_wp_error( $item_ids ) )
+			die('-1');
+	} else {
+		$item_ids = array();
+	}
+
+	foreach ( (array) $item_ids as $menu_item_id ) {
+		$menu_obj = get_post( $menu_item_id );
+		if ( ! empty( $menu_obj->ID ) ) {
+			$menu_items[] = wp_setup_nav_menu_item( $menu_obj );
+		}
+	}
+
+	if ( ! empty( $menu_items ) ) {
+		$args = array(
+			'after' => '',
+			'before' => '',
+			'context' => 'backend',
+			'link_after' => '',
+			'link_before' => '',
+			'walker' => new Walker_Nav_Menu_Edit,
+		);
+		echo walk_nav_menu_tree( $menu_items, 0, (object) $args );
+	}
+	break;
 case 'add-meta' :
 	check_ajax_referer( 'add-meta' );
 	$c = 0;
@@ -840,6 +896,10 @@ case 'add-meta' :
 		$mid = (int) array_pop(array_keys($_POST['meta']));
 		$key = $_POST['meta'][$mid]['key'];
 		$value = $_POST['meta'][$mid]['value'];
+		if ( '' == trim($key) )
+			die(__('Please provide a custom field name.'));
+		if ( '' == trim($value) )
+			die(__('Please provide a custom field value.'));
 		if ( !$meta = get_post_meta_by_id( $mid ) )
 			die('0'); // if meta doesn't exist
 		if ( !current_user_can( 'edit_post', $meta->post_id ) )
@@ -1026,9 +1086,19 @@ case 'hidden-columns' :
 		die('-1');
 
 	if ( is_array($hidden) )
-		update_user_option($user->ID, "manage-$page-columns-hidden", $hidden);
+		update_user_option($user->ID, "manage{$page}columnshidden", $hidden, true);
 
 	die('1');
+	break;
+case 'menu-quick-search':
+	if ( ! current_user_can( 'switch_themes' ) )
+		die('-1');
+
+	require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
+
+	_wp_ajax_menu_quick_search( $_REQUEST );
+
+	exit;
 	break;
 case 'meta-box-order':
 	check_ajax_referer( 'meta-box-order' );
@@ -1043,10 +1113,10 @@ case 'meta-box-order':
 		die('-1');
 
 	if ( $order )
-		update_user_option($user->ID, "meta-box-order_$page", $order);
+		update_user_option($user->ID, "meta-box-order_$page", $order, true);
 
 	if ( $page_columns )
-		update_user_option($user->ID, "screen_layout_$page", $page_columns);
+		update_user_option($user->ID, "screen_layout_$page", $page_columns, true);
 
 	die('1');
 	break;
@@ -1398,33 +1468,7 @@ case 'set-post-thumbnail':
 		}
 	}
 	die( '0' );
-case 'save-custom-link':
-	if ( ! current_user_can('manage_links') )
-		die('-1');
-
-	$link_name = isset( $_POST['link_name'] ) ? esc_html($_POST['link_name']) : null;
-	$link_url = isset( $_POST['link_url'] ) ? esc_url_raw($_POST['link_url']) : null;
-
-	if ( !$link_name || !$link_url )
-		die('-1');
-
-	$post = array(
-		'post_status' => 'draft', 'post_type' => 'nav_menu_item', 'ping_status' => 0,
-		'post_author' => $user_ID, 'post_title' => $link_name, 'post_excerpt' => '',
-		'post_parent' => 0, 'menu_order' => 0, 'post_content' => '',
-	);
-
-	$link_id = wp_insert_post( $post );
-
-	update_post_meta( $link_id, '_menu_item_type', 'custom' );
-	update_post_meta( $link_id, '_menu_item_object_id', (int) $link_id );
-	update_post_meta( $link_id, '_menu_item_object', 'custom' );
-	update_post_meta( $link_id, '_menu_item_target', '' );
-	update_post_meta( $link_id, '_menu_item_classes', '' );
-	update_post_meta( $link_id, '_menu_item_xfn', '' );
-	update_post_meta( $link_id, '_menu_item_url', $link_url );
-
-	die( json_encode($link_id) );
+	break;
 default :
 	do_action( 'wp_ajax_' . $_POST['action'] );
 	die('0');

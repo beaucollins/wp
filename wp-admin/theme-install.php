@@ -10,7 +10,7 @@
 require_once('./admin.php');
 
 if ( ! current_user_can('install_themes') )
-	wp_die(__('You do not have sufficient permissions to install themes on this blog.'));
+	wp_die(__('You do not have sufficient permissions to install themes on this site.'));
 
 include(ABSPATH . 'wp-admin/includes/theme-install.php');
 
@@ -59,7 +59,7 @@ include('./admin-header.php');
 ?>
 <div class="wrap">
 <?php screen_icon(); ?>
-<h2><a href="themes.php" class="menu-tabs menu-tab-inactive"><?php echo esc_html_x('Manage Themes', 'theme'); ?></a><a href="theme-install.php" class="menu-tabs"><?php echo esc_html( $title ); ?></a></h2>
+<h2><a href="themes.php" class="nav-tab"><?php echo esc_html_x('Manage Themes', 'theme'); ?></a><a href="theme-install.php" class="nav-tab nav-tab-active"><?php echo esc_html( $title ); ?></a></h2>
 
 	<ul class="subsubsub">
 <?php

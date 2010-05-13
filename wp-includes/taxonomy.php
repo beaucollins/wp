@@ -15,46 +15,49 @@
  * Creates the initial taxonomies when 'init' action is fired.
  */
 function create_initial_taxonomies() {
-	register_taxonomy( 'category', 'post', array(	'hierarchical' => true,
-												 	'update_count_callback' => '_update_post_term_count',
-													'label' => __('Categories'),
-													'singular_label' => __('Category'),
-													'query_var' => false,
-													'rewrite' => false,
-													'public' => true,
-													'show_ui' => true,
-													'_builtin' => true
-												) ) ;
+	register_taxonomy( 'category', 'post', array(
+		'hierarchical' => true,
+	 	'update_count_callback' => '_update_post_term_count',
+		'label' => __( 'Categories' ),
+		'singular_label' => __( 'Category' ),
+		'query_var' => false,
+		'rewrite' => false,
+		'public' => true,
+		'show_ui' => true,
+		'_builtin' => true,
+	) ) ;
 
 	register_taxonomy( 'post_tag', 'post', array(
-												 	'hierarchical' => false,
-													'update_count_callback' => '_update_post_term_count',
-													'label' => __('Post Tags'),
-													'singular_label' => __('Post Tag'),
-													'query_var' => false,
-													'rewrite' => false,
-													'public' => true,
-													'show_ui' => true,
-													'_builtin' => true
-												) ) ;
+	 	'hierarchical' => false,
+		'update_count_callback' => '_update_post_term_count',
+		'label' => __( 'Post Tags' ),
+		'singular_label' => __( 'Post Tag' ),
+		'query_var' => false,
+		'rewrite' => false,
+		'public' => true,
+		'show_ui' => true,
+		'_builtin' => true,
+	) );
 
-	register_taxonomy( 'nav_menu', 'nav_menu_item', array(	'hierarchical' => false,
-														'label' => __('Navigation Menus'),
-														'singular_label' => __('Navigation Menu'),
-														'query_var' => false,
-														'rewrite' => false,
-														'show_ui' => false,
-														'_builtin' => true,
-													) ) ;
+	register_taxonomy( 'nav_menu', 'nav_menu_item', array(
+		'hierarchical' => false,
+		'label' => __( 'Navigation Menus' ),
+		'singular_label' => __( 'Navigation Menu' ),
+		'query_var' => false,
+		'rewrite' => false,
+		'show_ui' => false,
+		'_builtin' => true,
+	) ) ;
 
-	register_taxonomy( 'link_category', 'link', array(	'hierarchical' => false,
-													  	'label' => __('Categories'),
-														'query_var' => false,
-														'rewrite' => false,
-														'public' => false,
-														'show_ui' => false,
-														'_builtin' => true,
-													) ) ;
+	register_taxonomy( 'link_category', 'link', array(
+		'hierarchical' => false,
+	  	'label' => __( 'Categories' ),
+		'query_var' => false,
+		'rewrite' => false,
+		'public' => false,
+		'show_ui' => false,
+		'_builtin' => true,
+	) ) ;
 }
 add_action( 'init', 'create_initial_taxonomies', 0 ); // highest priority
 
@@ -69,7 +72,7 @@ add_action( 'init', 'create_initial_taxonomies', 0 ); // highest priority
  *
  * @param array $args An array of key => value arguments to match against the taxonomy objects.
  * @param string $output The type of output to return, either taxonomy 'names' or 'objects'. 'names' is the default.
- * @param string $operator The logical operation to perform. 'or' means only one element 
+ * @param string $operator The logical operation to perform. 'or' means only one element
  *  from the array needs to match; 'and' means all elements must match. The default is 'and'.
  * @return array A list of taxonomy names or objects
  */
@@ -98,9 +101,10 @@ function get_taxonomies( $args = array(), $output = 'names', $operator = 'and' )
  * @uses $wp_taxonomies
  *
  * @param array|string|object $object Name of the type of taxonomy object, or an object (row from posts)
+ * @param string $output The type of output to return, either taxonomy 'names' or 'objects'. 'names' is the default.
  * @return array The names of all taxonomy of $object_type.
  */
-function get_object_taxonomies($object) {
+function get_object_taxonomies($object, $output = 'names') {
 	global $wp_taxonomies;
 
 	if ( is_object($object) ) {
@@ -112,9 +116,13 @@ function get_object_taxonomies($object) {
 	$object = (array) $object;
 
 	$taxonomies = array();
-	foreach ( (array) $wp_taxonomies as $taxonomy ) {
-		if ( array_intersect($object, (array) $taxonomy->object_type) )
-			$taxonomies[] = $taxonomy->name;
+	foreach ( (array) $wp_taxonomies as $tax_name => $tax_obj ) {
+		if ( array_intersect($object, (array) $tax_obj->object_type) ) {
+			if ( 'names' == $output )
+				$taxonomies[] = $tax_name;
+			else
+				$taxonomies[ $tax_name ] = $tax_obj;
+		}
 	}
 
 	return $taxonomies;
@@ -1523,8 +1531,8 @@ function wp_insert_term( $term, $taxonomy, $args = array() ) {
 
 	if ( empty($slug) )
 		$slug = sanitize_title($name);
-	elseif ( is_term($slug, $taxonomy) ) // Provided slug issue.
-		return new WP_Error('term_slug_exists', __('A Term with the slug provided already exists.'));
+	elseif ( is_term($slug) )
+		return new WP_Error('term_slug_exists', __('A term with the slug provided already exists.'));
 
 	$term_group = 0;
 	if ( $alias_of ) {
@@ -1541,21 +1549,36 @@ function wp_insert_term( $term, $taxonomy, $args = array() ) {
 		}
 	}
 
-	if ( ! $term_id = is_term($slug, $taxonomy) ) {
-		// Make sure the slug is unique accross all taxonomies.
-		$slug = wp_unique_term_slug($slug, (object) $args);
-		if ( false === $wpdb->insert( $wpdb->terms, compact( 'name', 'slug', 'term_group' ) ) )
-			return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
-		$term_id = (int) $wpdb->insert_id;
-	} else if ( is_taxonomy_hierarchical($taxonomy) && !empty($parent) ) {
-		// If the taxonomy supports hierarchy and the term has a parent, make the slug unique
-		// by incorporating parent slugs.
+	if ( $term_id = is_term($slug) ) {
+		$existing_term = $wpdb->get_row( $wpdb->prepare( "SELECT name FROM $wpdb->terms WHERE term_id = %d", $term_id), ARRAY_A );
+		// We've got an existing term, which matches the name of the new term:
+		if ( is_taxonomy_hierarchical($taxonomy) && $existing_term['name'] == $name ) {
+			// Heirarchical, and it matches an existing term, Do not allow same "name" in the same level.
+			$siblings = get_terms($taxonomy, array('fields' => 'names', 'get' => 'all', 'parent' => (int)$parent) );
+			if ( in_array($name, $siblings) ) {
+				return new WP_Error('term_exists', __('A term with the name provided already exists with this parent.'));
+			} else {
+				$slug = wp_unique_term_slug($slug, (object) $args);
+				if ( false === $wpdb->insert( $wpdb->terms, compact( 'name', 'slug', 'term_group' ) ) )
+					return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
+				$term_id = (int) $wpdb->insert_id;
+			}
+		} elseif ( $existing_term['name'] != $name ) {
+			// We've got an existing term, with a different name, Creat ethe new term.
+			$slug = wp_unique_term_slug($slug, (object) $args);
+			if ( false === $wpdb->insert( $wpdb->terms, compact( 'name', 'slug', 'term_group' ) ) )
+				return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
+			$term_id = (int) $wpdb->insert_id;
+		}
+	} else {
+		// This term does not exist at all in the database, Create it.
 		$slug = wp_unique_term_slug($slug, (object) $args);
 		if ( false === $wpdb->insert( $wpdb->terms, compact( 'name', 'slug', 'term_group' ) ) )
 			return new WP_Error('db_insert_error', __('Could not insert term into the database'), $wpdb->last_error);
 		$term_id = (int) $wpdb->insert_id;
 	}
 
+	// Seems unreachable, However, Is used in the case that a term name is provided, which sanitizes to an empty string.
 	if ( empty($slug) ) {
 		$slug = sanitize_title($slug, $term_id);
 		do_action( 'edit_terms', $term_id );
@@ -1716,7 +1739,10 @@ function wp_unique_term_slug($slug, $term) {
 			$parent_term = get_term($the_parent, $term->taxonomy);
 			if ( is_wp_error($parent_term) || empty($parent_term) )
 				break;
-				$slug .= '-' . $parent_term->slug;
+			$slug .= '-' . $parent_term->slug;
+			if ( ! is_term( $slug ) )
+				return $slug;
+
 			if ( empty($parent_term->parent) )
 				break;
 			$the_parent = $parent_term->parent;

@@ -251,7 +251,7 @@ class WP_Http {
 		$r['ssl'] = $arrURL['scheme'] == 'https' || $arrURL['scheme'] == 'ssl';
 
 		// Determine if this request is to OUR install of WordPress
-		$homeURL = parse_url(get_bloginfo('url'));
+		$homeURL = parse_url( get_bloginfo('url') );
 		$r['local'] = $homeURL['host'] == $arrURL['host'] || 'localhost' == $arrURL['host'];
 		unset($homeURL);
 
@@ -391,7 +391,7 @@ class WP_Http {
 	 */
 	function processResponse($strResponse) {
 		$res = explode("\r\n\r\n", $strResponse, 2);
-		
+
 		return array('headers' => isset($res[0]) ? $res[0] : array(), 'body' => isset($res[1]) ? $res[1] : '');
 	}
 

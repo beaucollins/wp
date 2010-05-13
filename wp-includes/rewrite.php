@@ -1399,7 +1399,7 @@ class WP_Rewrite {
 				$rewrite = array_merge($rewrite, array($pagematch => $pagequery));
 
 			//only on pages with comments add ../comment-page-xx/
-			if ( EP_PAGES & $ep_mask || EP_PERMALINK & $ep_mask || EP_NONE & $ep_mask )
+			if ( EP_PAGES & $ep_mask || EP_PERMALINK & $ep_mask )
 				$rewrite = array_merge($rewrite, array($commentmatch => $commentquery));
 			else if ( EP_ROOT & $ep_mask && get_option('page_on_front') )
 				$rewrite = array_merge($rewrite, array($rootcommentmatch => $rootcommentquery));
@@ -1564,10 +1564,11 @@ class WP_Rewrite {
 		if ( empty($this->permalink_structure) )
 			return $rewrite;
 
-		// robots.txt
-		$robots_rewrite = array('robots\.txt$' => $this->index . '?robots=1');
+		// robots.txt -only if installed at the root
+		$home_path = parse_url( home_url() );
+		$robots_rewrite = ( empty( $home_path['path'] ) || '/' == $home_path['path'] ) ? array( 'robots\.txt$' => $this->index . '?robots=1' ) : array();
 
-		//Default Feed rules - These are require to allow for the direct access files to work with permalink structure starting with %category%
+		// Default Feed rules - These are require to allow for the direct access files to work with permalink structure starting with %category%
 		$default_feeds = array(	'.*wp-atom.php$'	=>	$this->index . '?feed=atom',
 								'.*wp-rdf.php$'		=>	$this->index . '?feed=rdf',
 								'.*wp-rss.php$'		=>	$this->index . '?feed=rss',

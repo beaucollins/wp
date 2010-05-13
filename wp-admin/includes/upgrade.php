@@ -311,7 +311,7 @@ function wp_new_blog_notification($blog_title, $blog_url, $user_id, $password) {
 	$user = new WP_User($user_id);
 	$email = $user->user_email;
 	$name = $user->user_login;
-	$message = sprintf(__("Your new WordPress blog has been successfully set up at:
+	$message = sprintf(__("Your new WordPress site has been successfully set up at:
 
 %1\$s
 
@@ -320,13 +320,13 @@ You can log in to the administrator account with the following information:
 Username: %2\$s
 Password: %3\$s
 
-We hope you enjoy your new blog. Thanks!
+We hope you enjoy your new site. Thanks!
 
 --The WordPress Team
 http://wordpress.org/
 "), $blog_url, $name, $password);
 
-	@wp_mail($email, __('New WordPress Blog'), $message);
+	@wp_mail($email, __('New WordPress Site'), $message);
 }
 endif;
 
@@ -440,7 +440,7 @@ function upgrade_all() {
 	if ( $wp_current_db_version < 11958 )
 		upgrade_290();
 
-	if ( $wp_current_db_version < 14138 )
+	if ( $wp_current_db_version < 14217 )
 		upgrade_300();
 
 	maybe_disable_automattic_widgets();
@@ -1108,14 +1108,14 @@ function upgrade_290() {
 function upgrade_300() {
 	global $wp_current_db_version, $wpdb;
 
-	if ( $wp_current_db_version < 12751 ) {
+	if ( $wp_current_db_version < 14139 ) {
 		populate_roles_300();
 		if ( is_multisite() && is_main_site() && ! defined( 'MULTISITE' ) && get_site_option( 'siteurl' ) === false )
 			add_site_option( 'siteurl', '' );
 	}
 
 	// #11866 (Convert the taxonomy children cache into a transient) - Remove old cache.
-	if ( $wp_current_db_version < 14138 ) {
+	if ( $wp_current_db_version < 14139 ) {
 		foreach ( get_taxonomies( array('hierarchical' => true) )  as $taxonomy )
 			delete_option($taxonomy . '_children');
 	}
@@ -1134,6 +1134,10 @@ function upgrade_300() {
 	// 3.0-beta1 nav menu postmeta changes. can be removed before release. r13974
 	if ( $wp_current_db_version >= 13802 && $wp_current_db_version < 13974 )
 		$wpdb->update( $wpdb->postmeta, array( 'meta_value' => '' ), array( 'meta_key' => '_menu_item_target', 'meta_value' => '_self' ) );
+
+	// 3.0-beta metabox changes. can be removed before release. // r13551
+	if ( ( !is_multisite() || is_main_site() ) && $wp_current_db_version >= 13309 && $wp_current_db_version < 14217 )
+		$wpdb->query( "DELETE FROM $wpdb->usermeta WHERE meta_key LIKE '{$wpdb->base_prefix}%meta-box-hidden%' OR meta_key LIKE '{$wpdb->base_prefix}%closedpostboxes%'" );
 
 }
 
@@ -1619,7 +1623,7 @@ function make_site_theme_from_oldschool($theme_name, $template) {
 		if ($oldfile == 'index.php') { // Check to make sure it's not a new index
 			$index = implode('', file("$oldpath/$oldfile"));
 			if (strpos($index, 'WP_USE_THEMES') !== false) {
-				if (! @copy(WP_CONTENT_DIR . '/themes/'.WP_FALLBACK_THEME.'/index.php', "$site_dir/$newfile"))
+				if (! @copy(WP_CONTENT_DIR . '/themes/' . WP_DEFAULT_THEME . '/index.php', "$site_dir/$newfile"))
 					return false;
 				continue; // Don't copy anything
 				}
@@ -1679,7 +1683,7 @@ function make_site_theme_from_oldschool($theme_name, $template) {
  */
 function make_site_theme_from_default($theme_name, $template) {
 	$site_dir = WP_CONTENT_DIR . "/themes/$template";
-	$default_dir = WP_CONTENT_DIR . '/themes/'.WP_FALLBACK_THEME;
+	$default_dir = WP_CONTENT_DIR . '/themes/' . WP_DEFAULT_THEME;
 
 	// Copy files from the default theme to the site theme.
 	//$files = array('index.php', 'comments.php', 'comments-popup.php', 'footer.php', 'header.php', 'sidebar.php', 'style.css');
@@ -1775,7 +1779,7 @@ function make_site_theme() {
 
 	// Make the new site theme active.
 	$current_template = __get_option('template');
-	if ($current_template == WP_FALLBACK_THEME) {
+	if ($current_template == WP_DEFAULT_THEME) {
 		update_option('template', $template);
 		update_option('stylesheet', $template);
 	}

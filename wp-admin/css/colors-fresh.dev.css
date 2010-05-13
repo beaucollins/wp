@@ -110,11 +110,13 @@ div.dashboard-widget-submit {
 }
 
 div.tabs-panel,
-ul.category-tabs li.tabs {
+ul.category-tabs li.tabs,
+ul.add-menu-item-tabs li.tabs {
 	border-color: #dfdfdf;
 }
 
-ul.category-tabs li.tabs {
+ul.category-tabs li.tabs,
+ul.add-menu-item-tabs li.tabs {
 	background-color: #f1f1f1;
 }
 
@@ -379,7 +381,8 @@ div.dashboard-widget-submit input:hover,
 	border-color: #dfdfdf;
 }
 
-#side-sortables .category-tabs .tabs a {
+#side-sortables .category-tabs .tabs a,
+#side-sortables .add-menu-item-tabs .tabs a {
 	color: #333;
 }
 
@@ -490,7 +493,9 @@ a,
 }
 
 /* Because we don't want visited on these links */
+body.press-this .tabs a,
 body.press-this .tabs a:hover {
+	background-color: #fff;
 	border-color: #c6d9e9;
 	border-bottom-color: #fff;
 	color: #d54e21;
@@ -575,9 +580,11 @@ input.readonly, textarea.readonly {
 }
 
 #footer {
-	background: #eee;
-	border-color: #d4d4d4;
 	color: #777;
+	border-color: #d1d1d1;
+	background: #d9d9d9; /* fallback color */
+	background:-moz-linear-gradient(bottom,  #d7d7d7,  #e4e4e4);
+	background:-webkit-gradient(linear, left bottom, left top, from(#d7d7d7), to(#e4e4e4));
 }
 
 #media-items,
@@ -689,7 +696,7 @@ table.widefat span.spam a,
 	background: url(../images/xit.gif) no-repeat -10px 0;
 }
 
-#update-nag {
+#update-nag, .update-nag {
 	background-color: #FFFBCC;
 	border-color: #E6DB55;
 	color: #555;
@@ -700,7 +707,10 @@ table.widefat span.spam a,
 }
 
 #wphead {
-	background: url(../images/admin-header-footer.png) top left repeat-x;
+	border-bottom:#c6c6c6 1px solid;
+	background: #d9d9d9; /* fallback color */
+	background:-moz-linear-gradient(bottom,  #d7d7d7,  #e4e4e4);
+	background:-webkit-gradient(linear, left bottom, left top, from(#d7d7d7), to(#e4e4e4));
 }
 
 #wphead h1 a {
@@ -708,7 +718,7 @@ table.widefat span.spam a,
 }
 
 #user_info {
-	color: #999;
+	color: #777;
 }
 
 #user_info a:link,
@@ -1460,7 +1470,8 @@ fieldset.inline-edit-col-right .inline-edit-col {
 	background-color: #f5f5f5;
 }
 
-#post-body ul.category-tabs li.tabs a {
+#post-body ul.category-tabs li.tabs a,
+#post-body ul.add-menu-item-tabs li.tabs a {
 	color: #333;
 }
 
@@ -1481,12 +1492,14 @@ fieldset.inline-edit-col-right .inline-edit-col {
 }
 
 #favorite-first {
-	border-color: #ccc;
-	background: url(../images/fav-top.png) top left repeat-x;
+	border-color: #c0c0c0;
+	background: #f1f1f1; /* fallback color */
+	background:-moz-linear-gradient(bottom,  #e7e7e7,  #fff);
+	background:-webkit-gradient(linear, left bottom, left top, from(#e7e7e7), to(#fff));
 }
 
 #favorite-inside {
-	border-color: #ccc;
+	border-color: #c0c0c0;
 	background-color: #fff;
 }
 

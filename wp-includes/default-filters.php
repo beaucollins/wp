@@ -169,6 +169,7 @@ add_filter( 'the_posts',            '_close_comments_for_old_posts'       );
 add_filter( 'comments_open',        '_close_comments_for_old_post', 10, 2 );
 add_filter( 'pings_open',           '_close_comments_for_old_post', 10, 2 );
 add_filter( 'editable_slug',        'urldecode'                           );
+add_filter( 'nav_menu_meta_box_object', '_wp_nav_menu_meta_box_object'    );
 
 // Atom SSL support
 add_filter( 'atom_service_url','atom_service_url_filter' );
@@ -223,7 +224,11 @@ add_action( 'publish_post',               '_publish_post_hook',       5, 1 );
 add_action( 'save_post',                  '_save_post_hook',          5, 2 );
 add_action( 'transition_post_status',     '_transition_post_status',  5, 3 );
 add_action( 'comment_form', 'wp_comment_form_unfiltered_html_nonce'        );
-add_action( 'wp_scheduled_delete',        'wp_scheduled_delete' );
+add_action( 'wp_scheduled_delete',        'wp_scheduled_delete'            );
+add_action( 'trash_post',                 '_wp_trash_menu_item'            );
+add_action( 'untrash_post',               '_wp_untrash_menu_item'          );
+add_action( 'delete_post',                '_wp_delete_post_menu_item'      );
+add_action( 'delete_term',                '_wp_delete_tax_menu_item'       );
 
 // Post Thumbnail CSS class filtering
 add_action( 'begin_fetch_post_thumbnail_html', '_wp_post_thumbnail_class_filter_add'    );

@@ -21,6 +21,9 @@ require( ABSPATH . WPINC . '/ms-default-constants.php' );
 if ( defined( 'SUNRISE' ) )
 	include_once( WP_CONTENT_DIR . '/sunrise.php' );
 
+/** Check for and define SUBDOMAIN_INSTALL and the deprecated VHOST constant. */
+ms_subdomain_constants();
+
 if ( !isset( $current_site ) || !isset( $current_blog ) ) {
 
 	$domain = addslashes( $_SERVER['HTTP_HOST'] );
@@ -115,7 +118,7 @@ if ( !isset( $current_site ) || !isset( $current_blog ) ) {
 			$current_blog->blog_id = $blog_id = 1;
 		} else {
 			$msg = ! $wpdb->get_var( "SHOW TABLES LIKE '$wpdb->site'" ) ? ' ' . /*WP_I18N_TABLES_MISSING*/'Database tables are missing.'/*/WP_I18N_TABLES_MISSING*/ : '';
-			wp_die( /*WP_I18N_NO_BLOG*/'No blog by that name on this system.'/*/WP_I18N_NO_BLOG*/ . $msg );
+			wp_die( /*WP_I18N_NO_BLOG*/'No site by that name on this system.'/*/WP_I18N_NO_BLOG*/ . $msg );
 		}
 	}
 }

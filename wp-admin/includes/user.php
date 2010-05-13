@@ -158,8 +158,8 @@ function edit_user( $user_id = 0 ) {
 	if ( !empty( $pass1 ) )
 		$user->user_pass = $pass1;
 
-	if ( !$update && !validate_username( $user->user_login ) )
-		$errors->add( 'user_login', __( '<strong>ERROR</strong>: This username is invalid. Please enter a valid username.' ));
+	if ( !$update && isset( $_POST['user_login'] ) && !validate_username( $_POST['user_login'] ) )
+		$errors->add( 'user_login', __( '<strong>ERROR</strong>: This username is invalid because it uses illegal characters. Please enter a valid username.' ));
 
 	if ( !$update && username_exists( $user->user_login ) )
 		$errors->add( 'user_login', __( '<strong>ERROR</strong>: This username is already registered. Please choose another one.' ));
@@ -451,6 +451,8 @@ function wp_delete_user( $id, $reassign = 'novalue' ) {
 		$wpdb->update( $wpdb->links, array('link_owner' => $reassign), array('link_owner' => $id) );
 	}
 
+	clean_user_cache($id);
+
 	// FINALLY, delete user
 	if ( !is_multisite() ) {
 		$wpdb->query( $wpdb->prepare("DELETE FROM $wpdb->usermeta WHERE user_id = %d", $id) );
@@ -459,8 +461,6 @@ function wp_delete_user( $id, $reassign = 'novalue' ) {
 		$level_key = $wpdb->get_blog_prefix() . 'capabilities'; // wpmu site admins don't have user_levels
 		$wpdb->query("DELETE FROM $wpdb->usermeta WHERE user_id = $id AND meta_key = '{$level_key}'");
 	}
-
-	clean_user_cache($id);
 
 	// allow for commit transaction
 	do_action('deleted_user', $id);
@@ -855,9 +855,9 @@ function default_password_nag() {
 	echo '<p>';
 	echo '<strong>' . __('Notice:') . '</strong> ';
 	_e('You&rsquo;re using the auto-generated password for your account. Would you like to change it to something you&rsquo;ll remember easier?');
-	echo '<br /><br />';
-	printf( '<a href="%s">'.__('Yes, take me to my profile page').'</a> | ', admin_url('profile.php') . '#password' );
-	printf( '<a href="%s" id="default-password-nag-no">'.__('No thanks, do not remind me again').'</a>', '?default_password_nag=0' );
+	echo '</p><p>';
+	printf( '<a href="%s">' . __('Yes, take me to my profile page') . '</a> | ', admin_url('profile.php') . '#password' );
+	printf( '<a href="%s" id="default-password-nag-no">' . __('No thanks, do not remind me again') . '</a>', '?default_password_nag=0' );
 	echo '</p></div>';
 }
 

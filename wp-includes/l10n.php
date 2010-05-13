@@ -390,12 +390,13 @@ function load_plugin_textdomain( $domain, $abs_rel_path = false, $plugin_rel_pat
  * @since 3.0.0
  *
  * @param string $domain Unique identifier for retrieving translated strings
+ * @param strings $mu_plugin_rel_path Relative to WPMU_PLUGIN_DIR directory in which
+ * the MO file resides. Defaults is empty string.
  */
-function load_muplugin_textdomain( $domain, $path = false ) {
+function load_muplugin_textdomain( $domain, $mu_plugin_rel_path = '' ) {
 	$locale = apply_filters( 'plugin_locale', get_locale(), $domain );
-
-	$mofile = WPMU_PLUGIN_DIR . "/$domain-$locale.mo";
-	load_textdomain( $domain, $mofile );
+	$path = WPMU_PLUGIN_DIR . '/' . ltrim( $mu_plugin_rel_path, '/' );
+	load_textdomain( $domain, trailingslashit( $path ) . "$domain-$locale.mo" );
 }
 
 /**
@@ -490,20 +491,13 @@ function translate_user_role( $name ) {
  * @return array Array of language codes or an empty array if no languages are present.  Language codes are formed by stripping the .mo extension from the language file names.
  */
 function get_available_languages( $dir = null ) {
-	$languages = array();
-
-	if ( empty($dir) )
-		$dir = WP_LANG_DIR;
-
-	if ( is_dir( $dir ) && $dh = opendir( $dir ) ) {
-		while ( ( $lang_file = readdir( $dh ) ) !== false ) {
-			if ( substr( $lang_file, -3 ) == '.mo' && ( false === strpos( $lang_file, 'continents-cities' ) ) )
-				$languages[] = basename($lang_file, '.mo');
+	$languages = array();	
+		
+	foreach( (array)glob( ( is_null( $dir) ? WP_LANG_DIR : $dir ) . '/*.mo' ) as $lang_file ) {
+		if ( false === strpos( $lang_file, 'continents-cities' ) ) {
+			$languages[] = basename($lang_file, '.mo');
 		}
-		closedir($dh);
 	}
-
+	
 	return $languages;
 }
-
-?>

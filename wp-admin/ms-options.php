@@ -55,8 +55,11 @@ if (isset($_GET['updated'])) {
 			<tr valign="top">
 				<th scope="row"><?php _e( 'Global Terms' ) ?></th>
 				<td>
+				<label><input type="radio" id="global_terms_enabled" name="global_terms_enabled" value="0"<?php checked( get_site_option( 'global_terms_enabled' ), 0 ) ?>/> <?php _e( 'Disabled' ); ?></label><br/>
 				<label><input type="radio" id="global_terms_enabled" name="global_terms_enabled" value="1"<?php checked( get_site_option( 'global_terms_enabled' ), 1 ) ?>/> <?php _e( 'Maintain a global list of terms from all sites across the network.' ); ?></label><br />
-				<label><input type="radio" id="global_terms_enabled" name="global_terms_enabled" value="0"<?php checked( get_site_option( 'global_terms_enabled' ), 0 ) ?>/> <?php _e( 'Disabled' ); ?></label></td>
+				<?php if ( ! get_site_option( 'global_terms_enabled') ) { ?>
+				<strong><?php _e( 'Warning!' ); ?></strong> <?php _e( 'Enabling global terms will create a new table and synchronize terms across the network.' ); ?>
+				<?php } ?></td>
 			</tr>
 		</table>
 		<h3><?php _e( 'Dashboard Settings' ); ?></h3>
@@ -92,7 +95,7 @@ if (isset($_GET['updated'])) {
 				<th scope="row"><label for="admin_notice_feed"><?php _e( 'Admin Notice Feed' ) ?></label></th>
 				<td><input name="admin_notice_feed" class="large-text" type="text" id="admin_notice_feed" value="<?php echo esc_attr( get_site_option( 'admin_notice_feed' ) ) ?>" size="80" /><br />
 				<?php _e( 'Display the latest post from this RSS or Atom feed on all site dashboards. Leave blank to disable.' ); ?><br />
-				
+
 				<?php if ( get_site_option( 'admin_notice_feed' ) != get_home_url( $current_site->id, 'feed/' ) )
 					echo __( 'A good one to use would be the feed from your main site: ' ) . esc_url( get_home_url( $current_site->id, 'feed/' ) ) ?></td>
 			</tr>

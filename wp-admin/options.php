@@ -30,13 +30,34 @@ if ( empty($option_page) ) // This is for back compat and will eventually be rem
 if ( !current_user_can('manage_options') )
 	wp_die(__('Cheatin&#8217; uh?'));
 
+// Handle admin email change requests
+if ( is_multisite() ) {
+	if ( ! empty($_GET[ 'adminhash' ] ) ) {
+		$new_admin_details = get_option( 'adminhash' );
+		$redirect = 'options-general.php?updated=false';
+		if ( is_array( $new_admin_details ) && $new_admin_details[ 'hash' ] == $_GET[ 'adminhash' ] && !empty($new_admin_details[ 'newemail' ]) ) {
+			update_option( 'admin_email', $new_admin_details[ 'newemail' ] );
+			delete_option( 'adminhash' );
+			delete_option( 'new_admin_email' );
+			$redirect = 'options-general.php?updated=true';
+		}
+		wp_redirect( admin_url( $redirect ) );
+		exit;
+	} elseif ( ! empty( $_GET['dismiss'] ) && 'new_admin_email' == $_GET['dismiss'] ) {
+		delete_option( 'adminhash' );
+		delete_option( 'new_admin_email' );
+		wp_redirect( admin_url( 'options-general.php?updated=true' ) );
+		exit;
+	}
+}
+
 if ( is_multisite() && !is_super_admin() && 'update' != $action )
 	wp_die(__('Cheatin&#8217; uh?'));
 
 $whitelist_options = array(
 	'general' => array( 'blogname', 'blogdescription', 'gmt_offset', 'date_format', 'time_format', 'start_of_week', 'timezone_string' ),
-	'discussion' => array( 'default_pingback_flag', 'default_ping_status', 'default_comment_status', 'comments_notify', 'moderation_notify', 'comment_moderation', 'require_name_email', 'comment_whitelist', 'comment_max_links', 'moderation_keys', 'blacklist_keys', 'show_avatars', 'avatar_rating', 'avatar_default', 'close_comments_for_old_posts', 'close_comments_days_old', 'thread_comments', 'thread_comments_depth', 'page_comments', 'comments_per_page', 'default_comments_page', 'comment_order', 'comment_registration' ),
-	'media' => array( 'thumbnail_size_w', 'thumbnail_size_h', 'thumbnail_crop', 'medium_size_w', 'medium_size_h', 'large_size_w', 'large_size_h', 'image_default_size', 'image_default_align', 'image_default_link_type', 'embed_autourls', 'embed_size_w', 'embed_size_h', 'uploads_use_yearmonth_folders', 'upload_path', 'upload_url_path' ),
+	'discussion' => array( 'default_pingback_flag', 'default_ping_status', 'default_comment_status_page', 'default_comment_status', 'comments_notify', 'moderation_notify', 'comment_moderation', 'require_name_email', 'comment_whitelist', 'comment_max_links', 'moderation_keys', 'blacklist_keys', 'show_avatars', 'avatar_rating', 'avatar_default', 'close_comments_for_old_posts', 'close_comments_days_old', 'thread_comments', 'thread_comments_depth', 'page_comments', 'comments_per_page', 'default_comments_page', 'comment_order', 'comment_registration' ),
+	'media' => array( 'thumbnail_size_w', 'thumbnail_size_h', 'thumbnail_crop', 'medium_size_w', 'medium_size_h', 'large_size_w', 'large_size_h', 'image_default_size', 'image_default_align', 'image_default_link_type', 'embed_autourls', 'embed_size_w', 'embed_size_h' ),
 	'privacy' => array( 'blog_public' ),
 	'reading' => array( 'posts_per_page', 'posts_per_rss', 'rss_use_excerpt', 'blog_charset', 'show_on_front', 'page_on_front', 'page_for_posts' ),
 	'writing' => array( 'default_post_edit_rows', 'use_smilies', 'default_category', 'default_email_category', 'use_balanceTags', 'default_link_category', 'enable_app', 'enable_xmlrpc' ),
@@ -71,26 +92,6 @@ if ( !is_multisite() ) {
 }
 
 $whitelist_options = apply_filters( 'whitelist_options', $whitelist_options );
-
-if ( is_multisite() && is_super_admin() ) {
-	if ( ! empty($_GET[ 'adminhash' ] ) ) {
-		$new_admin_details = get_option( 'adminhash' );
-		$redirect = 'options-general.php?updated=false';
-		if ( is_array( $new_admin_details ) && $new_admin_details[ 'hash' ] == $_GET[ 'adminhash' ] && !empty($new_admin_details[ 'newemail' ]) ) {
-			update_option( 'admin_email', $new_admin_details[ 'newemail' ] );
-			delete_option( 'adminhash' );
-			delete_option( 'new_admin_email' );
-			$redirect = 'options-general.php?updated=true';
-		}
-		wp_redirect( admin_url( $redirect ) );
-		exit;
-	} elseif ( ! empty( $_GET['dismiss'] ) && 'new_admin_email' == $_GET['dismiss'] ) {
-		delete_option( 'adminhash' );
-		delete_option( 'new_admin_email' );
-		wp_redirect( admin_url( 'options-general.php?updated=true' ) );
-		exit;
-	}
-}
 
 /*
  * If $_GET['action'] == 'update' we are saving settings sent from a settings page

@@ -16,6 +16,9 @@
  * @return bool True if subdomain configuration is enabled, false otherwise.
  */
 function is_subdomain_install() {
+	if ( defined('SUBDOMAIN_INSTALL') )
+		return SUBDOMAIN_INSTALL;
+
 	if ( defined('VHOST') && VHOST == 'yes' )
 		return true;
 
@@ -38,6 +41,15 @@ function is_subdomain_install() {
 function ms_site_check() {
 	global $wpdb, $current_blog;
 
+	// Allow short-circuiting
+	$check = apply_filters('ms_site_check', null);
+	if ( null !== $check )
+		return true;
+
+	// Allow super admins to see blocked sites
+	if ( is_super_admin() )
+		return true;
+
 	if ( '1' == $current_blog->deleted ) {
 		if ( file_exists( WP_CONTENT_DIR . '/blog-deleted.php' ) ) {
 			return WP_CONTENT_DIR . '/blog-deleted.php';
@@ -59,7 +71,7 @@ function ms_site_check() {
 			return WP_CONTENT_DIR . '/blog-suspended.php';
 		} else {
 			header( 'HTTP/1.1 410 Gone' );
-			wp_die( /*WP_I18N_ARCHIVED*/'This blog has been archived or suspended.'/*/WP_I18N_ARCHIVED*/ );
+			wp_die( /*WP_I18N_ARCHIVED*/'This site has been archived or suspended.'/*/WP_I18N_ARCHIVED*/ );
 		}
 	}
 
@@ -172,7 +184,7 @@ function wpmu_current_site() {
 	// Still no dice.
 	// @todo Update or remove WPMU codex link.
 	if ( 1 == count( $sites ) )
-		wp_die( sprintf( /*WP_I18N_BLOG_DOESNT_EXIST*/'That blog does not exist. Please try <a href="%s">%s</a>.'/*/WP_I18N_BLOG_DOESNT_EXIST*/, $sites[0]->domain . $sites[0]->path ) );
+		wp_die( sprintf( /*WP_I18N_BLOG_DOESNT_EXIST*/'That site does not exist. Please try <a href="%s">%s</a>.'/*/WP_I18N_BLOG_DOESNT_EXIST*/, $sites[0]->domain . $sites[0]->path ) );
 	else
 		wp_die( /*WP_I18N_NO_SITE_DEFINED*/'No site defined on this host. If you are the owner of this site, please check <a href="http://codex.wordpress.org/Debugging_WPMU">Debugging WPMU</a> for help.'/*/WP_I18N_NO_SITE_DEFINED*/ );
 }
@@ -180,9 +192,9 @@ function wpmu_current_site() {
 /**
  * Displays a failure message.
  *
- * Used when blog does not exist. Checks for a missing $wpdb->site table as well.
+ * Used when a blog's tables do not exist. Checks for a missing $wpdb->site table as well.
  *
- * @todo update for 3.0, pare down, and i18n
+ * @todo update Codex link for 3.0.0
  *
  * @access private
  * @since 3.0.0
@@ -190,23 +202,27 @@ function wpmu_current_site() {
 function ms_not_installed() {
 	global $wpdb, $domain, $path;
 
-	$msg = '<h1>' . /*WP_I18N_FATAL_ERROR*/'Fatal Error'/*/WP_I18N_FATAL_ERROR*/ . '</h1>';
-	$msg .= '<p>' . /*WP_I18N_CONTACT_OWNER*/'If your site does not display, please contact the owner of this network.'/*/WP_I18N_CONTACT_OWNER*/ . '</p>';
-	$msg .= '<p>' . /*WP_I18N_CHECK_MYSQL*/'If you are the owner of this network please check that MySQL is running properly and all tables are error free.'/*/WP_I18N_CHECK_MYSQL*/ . '</p>';
-	if ( !$wpdb->get_var( "SHOW TABLES LIKE '$wpdb->site'" ) )
-		$msg .= '<p>' . sprintf( /*WP_I18N_TABLES_MISSING_LONG*/'<strong>Database tables are missing.</strong> This means that MySQL is not running, WordPress was not installed properly, or someone deleted <code>%s</code>. You really <em>should</em> look at your database now.'/*/WP_I18N_TABLES_MISSING_LONG*/, $wpdb->site ) . '</p>';
+	$title = /*WP_I18N_FATAL_ERROR*/'Error establishing database connection'/*/WP_I18N_FATAL_ERROR*/;
+	$msg  = '<h1>' . $title . '</h1>';
+	if ( ! is_admin() )
+		die( $msg );
+	$msg .= '<p>' . /*WP_I18N_CONTACT_OWNER*/'If your site does not display, please contact the owner of this network.'/*/WP_I18N_CONTACT_OWNER*/ . '';
+	$msg .= ' ' . /*WP_I18N_CHECK_MYSQL*/'If you are the owner of this network please check that MySQL is running properly and all tables are error free.'/*/WP_I18N_CHECK_MYSQL*/ . '</p>';
+	if ( false && !$wpdb->get_var( "SHOW TABLES LIKE '$wpdb->site'" ) )
+		$msg .= '<p>' . sprintf( /*WP_I18N_TABLES_MISSING_LONG*/'<strong>Database tables are missing.</strong> This means that MySQL is not running, WordPress was not installed properly, or someone deleted <code>%s</code>. You really should look at your database now.'/*/WP_I18N_TABLES_MISSING_LONG*/, $wpdb->site ) . '</p>';
 	else
-		$msg .= '<p>' . sprintf( /*WP_I18N_NO_SITE_FOUND*/'<strong>Could Not Find Site!</strong> Searched for table <em>%1$s</em> in <code>%2$s</code>. Is that right?'/*/WP_I18N_NO_SITE_FOUND*/, $domain . $path, DB_NAME, $wpdb->blogs ) . '</p>';
-	$msg .= '<h1>' . /*WP_I18N_WHAT_DO_I_DO*/'What do I do now?'/*WP_I18N_WHAT_DO_I_DO*/ . '</h1>';
-	// @todo Update WPMU codex link.
-	$msg .= '<p>' . /*WP_I18N_RTFM*/'Read the <a target="_blank" href="http://codex.wordpress.org/Debugging_WPMU">bug report</a> page. Some of the guidelines there may help you figure out what went wrong.'/*/WP_I18N_RTFM*/ . '</p>';
-	$msg .= '<p>' . /*WP_I18N_STUCK*/'If you&#8217;re still stuck with this message, then check that your database contains the following tables:'/*/WP_I18N_STUCK*/ . '</p><ul>';
-	foreach ( $wpdb->global_tables as $table ) {
-		$msg .= '<li>' . $wpdb->prefix . $table . '</li>';
+		$msg .= '<p>' . sprintf( /*WP_I18N_NO_SITE_FOUND*/'<strong>Could not find site <code>%1$s</code>.</strong> Searched for table <code>%2$s</code> in database <code>%3$s</code>. Is that right?'/*/WP_I18N_NO_SITE_FOUND*/, rtrim( $domain . $path, '/' ), $wpdb->blogs, DB_NAME ) . '</p>';
+	$msg .= '<p><strong>' . /*WP_I18N_WHAT_DO_I_DO*/'What do I do now?'/*WP_I18N_WHAT_DO_I_DO*/ . '</strong> ';
+	$msg .= /*WP_I18N_RTFM*/'Read the <a target="_blank" href="http://codex.wordpress.org/Debugging_WPMU">bug report</a> page. Some of the guidelines there may help you figure out what went wrong.'/*/WP_I18N_RTFM*/;
+	$msg .= ' ' . /*WP_I18N_STUCK*/'If you&#8217;re still stuck with this message, then check that your database contains the following tables:'/*/WP_I18N_STUCK*/ . '</p><ul>';
+	foreach ( $wpdb->tables('global') as $t => $table ) {
+		if ( 'sitecategories' == $t )
+			continue;
+		$msg .= '<li>' . $table . '</li>';
 	}
 	$msg .= '</ul>';
-	// @todo Update WPMU codex link and support instructions.
-	$msg .= '<p>' . /*WP_I18N_MS_FORUMS*/'If you suspect a problem please report it to the support forums but you must include the information asked for in the <a target="_blank" href="http://codex.wordpress.org/Debugging_WPMU">WPMU bug reporting guidelines</a>!'/*/WP_I18N_MS_FORUMS*/ . '</p>';
 
-	die( $msg );
+	wp_die( $msg, $title );
 }
+
+?>

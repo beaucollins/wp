@@ -10,7 +10,7 @@
 require_once('./admin.php');
 
 if ( !current_user_can('edit_plugins') )
-	wp_die('<p>'.__('You do not have sufficient permissions to edit plugins for this blog.').'</p>');
+	wp_die( __('You do not have sufficient permissions to edit plugins for this site.') );
 
 $title = __("Edit Plugins");
 $parent_file = 'plugins.php';
@@ -20,6 +20,9 @@ wp_reset_vars(array('action', 'redirect', 'profile', 'error', 'warning', 'a', 'f
 wp_admin_css( 'theme-editor' );
 
 $plugins = get_plugins();
+
+if ( empty($plugins) )
+	wp_die( __('There are no plugins installed on this site.') );
 
 if ( isset($_REQUEST['file']) )
 	$plugin = stripslashes($_REQUEST['file']);
@@ -52,6 +55,8 @@ case 'update':
 		fwrite($f, $newcontent);
 		fclose($f);
 
+		$network_wide = is_plugin_active_for_network( $file );
+
 		// Deactivate so we can test it.
 		if ( is_plugin_active($file) || isset($_POST['phperror']) ) {
 			if ( is_plugin_active($file) )
@@ -59,7 +64,7 @@ case 'update':
 
 			update_option('recently_activated', array($file => time()) + (array)get_option('recently_activated'));
 
-			wp_redirect(add_query_arg('_wpnonce', wp_create_nonce('edit-plugin-test_' . $file), "plugin-editor.php?file=$file&liveupdate=1&scrollto=$scrollto"));
+			wp_redirect(add_query_arg('_wpnonce', wp_create_nonce('edit-plugin-test_' . $file), "plugin-editor.php?file=$file&liveupdate=1&scrollto=$scrollto&networkwide=" . $network_wide));
 			exit;
 		}
 		wp_redirect("plugin-editor.php?file=$file&a=te&scrollto=$scrollto");
@@ -80,7 +85,7 @@ default:
 			wp_die( $error );
 
 		if ( ! is_plugin_active($file) )
-			activate_plugin($file, "plugin-editor.php?file=$file&phperror=1"); // we'll override this later if the plugin can be included without fatal error
+			activate_plugin($file, "plugin-editor.php?file=$file&phperror=1", ! empty( $_GET['networkwide'] ) ); // we'll override this later if the plugin can be included without fatal error
 
 		wp_redirect("plugin-editor.php?file=$file&a=te&scrollto=$scrollto");
 		exit;

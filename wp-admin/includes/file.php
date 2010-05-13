@@ -157,17 +157,17 @@ function get_temp_dir() {
 		return trailingslashit($temp);
 
 	$temp = WP_CONTENT_DIR . '/';
-	if ( is_dir($temp) && is_writable($temp) )
+	if ( is_dir($temp) && @is_writable($temp) )
 		return $temp;
 
 	if  ( function_exists('sys_get_temp_dir') ) {
 		$temp = sys_get_temp_dir();
-		if ( is_writable($temp) )
+		if ( @is_writable($temp) )
 			return trailingslashit($temp);
 	}
 
 	$temp = ini_get('upload_tmp_dir');
-	if ( is_dir($temp) && is_writable($temp) )
+	if ( is_dir($temp) && @is_writable($temp) )
 		return trailingslashit($temp);
 
 	$temp = '/tmp/';
@@ -344,7 +344,7 @@ function wp_handle_upload( &$file, $overrides = false, $time = null ) {
 	if ( is_multisite() )
 		delete_transient( 'dirsize_cache' );
 
-	return apply_filters( 'wp_handle_upload', array( 'file' => $new_file, 'url' => $url, 'type' => $type ) );
+	return apply_filters( 'wp_handle_upload', array( 'file' => $new_file, 'url' => $url, 'type' => $type ), 'upload' );
 }
 
 /**
@@ -420,6 +420,36 @@ function wp_handle_sideload( &$file, $overrides = false ) {
 
 		extract( $wp_filetype );
 
+		// If the file claims to be an image, validate it's extension
+		if ( function_exists('getimagesize') && !empty( $type ) && 'image/' == substr( $type, 0, 6 ) && is_uploaded_file( $file['tmp_name'] ) ) {
+			// Attempt to figure out what type of image it really is
+			$imgstats = @getimagesize( $file['tmp_name'] );
+
+			// If getimagesize() knows what kind of image it really is and if the real MIME doesn't match the claimed MIME
+			if ( !empty($imgstats['mime']) && $imgstats['mime'] != $type ) {
+				// This is a simplified array of MIMEs that getimagesize() can detect and their extensions
+				$mime_to_ext = apply_filters( 'getimagesize_mimes_to_exts', array(
+					'image/jpeg' => 'jpg',
+					'image/png'  => 'png',
+					'image/gif'  => 'gif',
+					'image/bmp'  => 'bmp',
+					'image/tiff' => 'tif',
+				) );
+
+				// Replace whatever's after the last period in the filename with the correct extension
+				if ( !empty($mime_to_ext[$imgstats['mime']]) ) {
+					$filename_parts = explode( '.', $file['name'] );
+					array_pop( $filename_parts );
+					$filename_parts[] = $mime_to_ext[$imgstats['mime']];
+					$file['name'] = implode( '.', $filename_parts );
+
+					// Re-validate the extension / MIME
+					$wp_filetype = wp_check_filetype( $file['name'], $mimes );
+					extract( $wp_filetype );
+				}
+			}
+		}
+
 		if ( ( !$type || !$ext ) && !current_user_can( 'unfiltered_upload' ) )
 			return $upload_error_handler( $file, __( 'File type does not meet security guidelines. Try another.' ));
 
@@ -454,7 +484,7 @@ function wp_handle_sideload( &$file, $overrides = false ) {
 	// Compute the URL
 	$url = $uploads['url'] . "/$filename";
 
-	$return = apply_filters( 'wp_handle_upload', array( 'file' => $new_file, 'url' => $url, 'type' => $type ) );
+	$return = apply_filters( 'wp_handle_upload', array( 'file' => $new_file, 'url' => $url, 'type' => $type ), 'sideload' );
 
 	return $return;
 }
@@ -503,7 +533,7 @@ function download_url( $url ) {
 
 /**
  * Unzip's a specified ZIP file to a location on the Filesystem via the WordPress Filesystem Abstraction.
- * Assumes that WP_Filesystem() has already been called and set up.
+ * Assumes that WP_Filesystem() has already been called and set up. Does not extract a root-level __MACOSX directory, if present.
  *
  * Attempts to increase the PHP Memory limit to 256M before uncompressing,
  * However, The most memory required shouldn't be much larger than the Archive itself.
@@ -576,12 +606,16 @@ function _unzip_file_ziparchive($file, $to, $needed_dirs = array() ) {
 	$z = new ZipArchive();
 
 	// PHP4-compat - php4 classes can't contain constants
-	if ( true !== $z->open($file, /* ZIPARCHIVE::CHECKCONS */ 4) )
+	$zopen = $z->open($file, /* ZIPARCHIVE::CHECKCONS */ 4);
+	if ( true !== $zopen || /* ZIPARCHIVE::ZIP_ER_OK */ 0 !== $zopen ) // may return true, or (int)0 ZIP_ER_OK under certain versions
 		return new WP_Error('incompatible_archive', __('Incompatible Archive.'));
 
 	for ( $i = 0; $i < $z->numFiles; $i++ ) {
 		if ( ! $info = $z->statIndex($i) )
 			return new WP_Error('stat_failed', __('Could not retrieve file from archive.'));
+
+		if ( '__MACOSX/' === substr($info['name'], 0, 9) ) // Skip the OS X-created __MACOSX directory
+			continue;
 
 		if ( '/' == substr($info['name'], -1) ) // directory
 			$needed_dirs[] = $to . untrailingslashit($info['name']);
@@ -604,6 +638,9 @@ function _unzip_file_ziparchive($file, $to, $needed_dirs = array() ) {
 			return new WP_Error('stat_failed', __('Could not retrieve file from archive.'));
 
 		if ( '/' == substr($info['name'], -1) ) // directory
+			continue;
+
+		if ( '__MACOSX/' === substr($info['name'], 0, 9) ) // Don't extract the OS X-created __MACOSX directory files
 			continue;
 
 		$contents = $z->getFromIndex($i);
@@ -647,8 +684,12 @@ function _unzip_file_pclzip($file, $to, $needed_dirs = array()) {
 		return new WP_Error('empty_archive', __('Empty archive.'));
 
 	// Determine any children directories needed (From within the archive)
-	foreach ( $archive_files as $file )
+	foreach ( $archive_files as $file ) {
+		if ( '__MACOSX/' === substr($file['filename'], 0, 9) ) // Skip the OS X-created __MACOSX directory
+			continue;
+
 		$needed_dirs[] = $to . untrailingslashit( $file['folder'] ? $file['filename'] : dirname($file['filename']) );
+	}
 
 	$needed_dirs = array_unique($needed_dirs);
 	asort($needed_dirs);
@@ -663,6 +704,9 @@ function _unzip_file_pclzip($file, $to, $needed_dirs = array()) {
 	// Extract the files from the zip
 	foreach ( $archive_files as $file ) {
 		if ( $file['folder'] )
+			continue;
+
+		if ( '__MACOSX/' === substr($file['filename'], 0, 9) ) // Don't extract the OS X-created __MACOSX directory files
 			continue;
 
 		if ( ! $wp_filesystem->put_contents( $to . $file['filename'], $file['content'], FS_CHMOD_FILE) )

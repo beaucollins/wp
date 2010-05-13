@@ -197,7 +197,7 @@ function populate_options() {
 
 	$options = array(
 	'siteurl' => $guessurl,
-	'blogname' => __('My Blog'),
+	'blogname' => __('My Site'),
 	/* translators: blog tagline */
 	'blogdescription' => __('Just another WordPress site'),
 	'users_can_register' => 0,
@@ -215,6 +215,7 @@ function populate_options() {
 	'mailserver_port' => 110,
 	'default_category' => 1,
 	'default_comment_status' => 'open',
+	'default_comment_status_page' => 'open',
 	'default_ping_status' => 'open',
 	'default_pingback_flag' => 1,
 	'default_post_edit_rows' => 10,
@@ -607,7 +608,10 @@ function populate_roles_300() {
 
 	if ( !empty( $role ) ) {
 		$role->add_cap( 'update_core' );
+		$role->add_cap( 'list_users' );
 		$role->add_cap( 'remove_users' );
+		$role->add_cap( 'add_users' );
+		$role->add_cap( 'promote_users' );
 		$role->add_cap( 'edit_theme_options' );
 	}
 }
@@ -647,8 +651,8 @@ function populate_network( $network_id = 1, $domain = '', $email = '', $site_nam
 	$allowed_themes = array( $stylesheet => true );
 	if ( $template != $stylesheet )
 		$allowed_themes[ $template ] = true;
-	if ( WP_FALLBACK_THEME != $stylesheet && WP_FALLBACK_THEME != $template )
-		$allowed_themes[ WP_FALLBACK_THEME ] = true;
+	if ( WP_DEFAULT_THEME != $stylesheet && WP_DEFAULT_THEME != $template )
+		$allowed_themes[ WP_DEFAULT_THEME ] = true;
 
 	if ( 1 == $network_id ) {
 		$wpdb->insert( $wpdb->site, array( 'domain' => $domain, 'path' => $path ) );
@@ -672,7 +676,7 @@ function populate_network( $network_id = 1, $domain = '', $email = '', $site_nam
 
 	$welcome_email = __( 'Dear User,
 
-Your new SITE_NAME blog has been successfully set up at:
+Your new SITE_NAME site has been successfully set up at:
 BLOG_URL
 
 You can log in to the administrator account with the following information:
@@ -680,7 +684,7 @@ Username: USERNAME
 Password: PASSWORD
 Login Here: BLOG_URLwp-login.php
 
-We hope you enjoy your new blog.
+We hope you enjoy your new site.
 Thanks!
 
 --The Team @ SITE_NAME' );
@@ -706,6 +710,8 @@ Thanks!
 		'subdomain_install' => intval( $subdomain_install ),
 		'global_terms_enabled' => global_terms_enabled() ? '1' : '0'
 	);
+	if ( !intval( $subdomain_install ) ) 
+		$sitemeta['illegal_names'][] = 'blog';
 
 	$insert = '';
 	foreach ( $sitemeta as $meta_key => $meta_value ) {
@@ -753,11 +759,11 @@ Thanks!
 
 		if ( ! $vhost_ok ) {
 			$msg = '<p><strong>' . __( 'Warning! Wildcard DNS may not be configured correctly!' ) . '</strong></p>';
-			$msg .= '<p>' . sprintf( __( 'To use a subdomain configuration, you must have a wildcard entry in your DNS. The installer attempted to contact a random hostname (<code>%1$s</code>) on your domain.' ), $hostname );
+			$msg .= '<p>' . sprintf( __( 'The installer attempted to contact a random hostname (<code>%1$s</code>) on your domain.' ), $hostname );
 			if ( ! empty ( $errstr ) )
-				$msg .= ' ' . sprintf( __( 'This resulted in an error message: %s' ), $errstr );
+				$msg .= ' ' . sprintf( __( 'This resulted in an error message: %s' ), '<code>' . $errstr . '</code>' );
 			$msg .= '</p>';
-			$msg .= '<p>' . __( 'If you want to host sites in the form of <code>http://site1.example.com</code> then you must add a wildcard record to your DNS records. This usually means adding a <code>*</code> hostname record pointing at your web server in your DNS configuration tool.' ) . '</p>';
+			$msg .= '<p>' . _e( 'To use a subdomain configuration, you must have a wildcard entry in your DNS. This usually means adding a <code>*</code> hostname record pointing at your web server in your DNS configuration tool.' ) . '</p>';
 			$msg .= '<p>' . __( 'You can still use your site but any subdomain you create may not be accessible. If you know your DNS is correct, ignore this message.' ) . '</p>';
 			return new WP_Error( 'no_wildcard_dns', $msg );
 		}

@@ -100,12 +100,12 @@ function twentyten_setup() {
 	// Your changeable header business starts here
 	define( 'HEADER_TEXTCOLOR', '' );
 	// No CSS, just IMG call. The %s is a placeholder for the theme template directory URI.
-	define( 'HEADER_IMAGE', '%s/images/headers/forestfloor.jpg' );
+	define( 'HEADER_IMAGE', '%s/images/headers/path.jpg' );
 
 	// The height and width of your custom header. You can hook into the theme's own filters to change these values.
 	// Add a filter to twentyten_header_image_width and twentyten_header_image_height to change these values.
-	define( 'HEADER_IMAGE_WIDTH', apply_filters( 'twentyten_header_image_width',  940 ) );
-	define( 'HEADER_IMAGE_HEIGHT', apply_filters( 'twentyten_header_image_height',	198 ) );
+	define( 'HEADER_IMAGE_WIDTH', apply_filters( 'twentyten_header_image_width', 940 ) );
+	define( 'HEADER_IMAGE_HEIGHT', apply_filters( 'twentyten_header_image_height', 198 ) );
 
 	// We'll be using post thumbnails for custom header images on posts and pages.
 	// We want them to be 940 pixels wide by 198 pixels tall (larger images will be auto-cropped to fit).
@@ -204,6 +204,17 @@ function twentyten_the_page_number() {
 }
 endif;
 
+if ( ! function_exists( 'twentyten_page_menu_args' ) ) :
+/**
+ * Get our wp_nav_menu() fallback, wp_page_menu(), to show a home link.
+ */
+function twentyten_page_menu_args($args) {
+	$args['show_home'] = true;
+	return $args;
+}
+add_filter('wp_page_menu_args', 'twentyten_page_menu_args');
+endif;
+
 /**
  * Sets the post excerpt length to 40 characters.
  *
@@ -227,7 +238,7 @@ add_filter( 'excerpt_length', 'twentyten_excerpt_length' );
  * @return string A pretty 'Continue reading' link.
  */
 function twentyten_excerpt_more( $more ) {
-	return '&nbsp;&hellip; <a href="'. get_permalink() . '">' . __('Continue&nbsp;reading&nbsp;<span class="meta-nav">&rarr;</span>', 'twentyten') . '</a>';
+	return ' &hellip; <a href="'. get_permalink() . '">' . __('Continue reading <span class="meta-nav">&rarr;</span>', 'twentyten') . '</a>';
 }
 add_filter( 'excerpt_more', 'twentyten_excerpt_more' );
 
@@ -268,7 +279,7 @@ function twentyten_comment( $comment, $args, $depth ) {
 			<br />
 		<?php endif; ?>
 
-		<div class="comment-meta commentmetadata"><a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>"><?php printf( __( '%1$s at %2$s', 'twentyten' ), get_comment_date(),  get_comment_time() ); ?></a><?php edit_comment_link( __( '(Edit)', 'twentyten' ),'  ','' ); ?></div>
+		<div class="comment-meta commentmetadata"><a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>"><?php printf( __( '%1$s at %2$s', 'twentyten' ), get_comment_date(),  get_comment_time() ); ?></a><?php edit_comment_link( __( '(Edit)', 'twentyten' ), ' ' ); ?></div>
 
 		<div class="comment-body"><?php comment_text(); ?></div>
 
@@ -279,79 +290,8 @@ function twentyten_comment( $comment, $args, $depth ) {
 
 	<?php else : ?>
 	<li class="post pingback">
-		<p><?php _e( 'Pingback: ', 'twentyten' ); ?><?php comment_author_link(); ?><?php edit_comment_link ( __('edit', 'twentyten'), '&nbsp;&nbsp;', '' ); ?></p>
+		<p><?php _e( 'Pingback:', 'twentyten' ); ?> <?php comment_author_link(); ?><?php edit_comment_link ( __('(Edit)', 'twentyten'), ' ' ); ?></p>
 	<?php endif;
-}
-endif;
-
-if ( ! function_exists( 'twentyten_cat_list' ) ) :
-/**
- * Returns the list of categories
- *
- * Returns the list of categories based on if we are or are
- * not browsing a category archive page.
- *
- * @uses twentyten_term_list
- *
- * @return string
- */
-function twentyten_cat_list() {
-	return twentyten_term_list( 'category', ', ', __( 'Posted in %s', 'twentyten' ), __( 'Also posted in %s', 'twentyten' ) );
-}
-endif;
-
-if ( ! function_exists( 'twentyten_tag_list' ) ) :
-/**
- * Returns the list of tags
- *
- * Returns the list of tags based on if we are or are not
- * browsing a tag archive page
- *
- * @uses twentyten_term_list
- *
- * @return string
- */
-function twentyten_tag_list() {
-	return twentyten_term_list( 'post_tag', ', ', __( 'Tagged %s', 'twentyten' ), __( 'Also tagged %s', 'twentyten' ) );
-}
-endif;
-
-
-if ( ! function_exists( 'twentyten_term_list' ) ) :
-/**
- * Returns the list of taxonomy items in multiple ways
- *
- * Returns the list of taxonomy items differently based on
- * if we are browsing a term archive page or a different
- * type of page.  If browsing a term archive page and the
- * post has no other taxonomied terms, it returns empty
- *
- * @return string
- */
-function twentyten_term_list( $taxonomy, $glue = ', ', $text = '', $also_text = '' ) {
-	global $wp_query, $post;
-	$current_term = $wp_query->get_queried_object();
-	$terms = wp_get_object_terms( $post->ID, $taxonomy );
-	// If we're viewing a Taxonomy page..
-	if ( isset( $current_term->taxonomy ) && $taxonomy == $current_term->taxonomy ) {
-		// Remove the term from display.
-		foreach ( (array) $terms as $key => $term ) {
-			if ( $term->term_id == $current_term->term_id ) {
-				unset( $terms[$key] );
-				break;
-			}
-		}
-		// Change to Also text as we've now removed something from the terms list.
-		$text = $also_text;
-	}
-	$tlist = array();
-	$rel = 'category' == $taxonomy ? 'rel="category"' : 'rel="tag"';
-	foreach ( (array) $terms as $term ) {
-		$tlist[] = '<a href="' . get_term_link( $term, $taxonomy ) . '" title="' . esc_attr( sprintf( __( 'View all posts in %s', 'twentyten' ), $term->name ) ) . '" ' . $rel . '>' . $term->name . '</a>';
-	}
-	if ( ! empty( $tlist ) )
-		return sprintf( $text, join( $glue, $tlist ) );
-	return '';
 }
 endif;
 
@@ -365,9 +305,9 @@ endif;
 function twentyten_widgets_init() {
 	// Area 1
 	register_sidebar( array (
-		'name' => 'Primary Widget Area',
+		'name' => __( 'Primary Widget Area', 'twentyten' ),
 		'id' => 'primary-widget-area',
-		'description' => __( 'The primary widget area' , 'twentyten' ),
+		'description' => __( 'The primary widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
 		'after_widget' => "</li>",
 		'before_title' => '<h3 class="widget-title">',
@@ -376,9 +316,9 @@ function twentyten_widgets_init() {
 
 	// Area 2
 	register_sidebar( array (
-		'name' => 'Secondary Widget Area',
+		'name' => __( 'Secondary Widget Area', 'twentyten' ),
 		'id' => 'secondary-widget-area',
-		'description' => __( 'The secondary widget area' , 'twentyten' ),
+		'description' => __( 'The secondary widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
 		'after_widget' => "</li>",
 		'before_title' => '<h3 class="widget-title">',
@@ -387,9 +327,9 @@ function twentyten_widgets_init() {
 
 	// Area 3
 	register_sidebar( array (
-		'name' => 'First Footer Widget Area',
+		'name' => __( 'First Footer Widget Area', 'twentyten' ),
 		'id' => 'first-footer-widget-area',
-		'description' => __( 'The first footer widget area' , 'twentyten' ),
+		'description' => __( 'The first footer widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
 		'after_widget' => "</li>",
 		'before_title' => '<h3 class="widget-title">',
@@ -398,9 +338,9 @@ function twentyten_widgets_init() {
 
 	// Area 4
 	register_sidebar( array (
-		'name' => 'Second Footer Widget Area',
+		'name' => __( 'Second Footer Widget Area', 'twentyten' ),
 		'id' => 'second-footer-widget-area',
-		'description' => __( 'The second footer widget area' , 'twentyten' ),
+		'description' => __( 'The second footer widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
 		'after_widget' => "</li>",
 		'before_title' => '<h3 class="widget-title">',
@@ -409,9 +349,9 @@ function twentyten_widgets_init() {
 
 	// Area 5
 	register_sidebar( array (
-		'name' => 'Third Footer Widget Area',
+		'name' => __( 'Third Footer Widget Area', 'twentyten' ),
 		'id' => 'third-footer-widget-area',
-		'description' => __( 'The third footer widget area' , 'twentyten' ),
+		'description' => __( 'The third footer widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
 		'after_widget' => "</li>",
 		'before_title' => '<h3 class="widget-title">',
@@ -420,9 +360,9 @@ function twentyten_widgets_init() {
 
 	// Area 6
 	register_sidebar( array (
-		'name' => 'Fourth Footer Widget Area',
+		'name' => __( 'Fourth Footer Widget Area', 'twentyten' ),
 		'id' => 'fourth-footer-widget-area',
-		'description' => __( 'The fourth footer widget area' , 'twentyten' ),
+		'description' => __( 'The fourth footer widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
 		'after_widget' => "</li>",
 		'before_title' => '<h3 class="widget-title">',
@@ -439,3 +379,22 @@ function twentyten_remove_recent_comments_style() {
 	remove_action( 'wp_head', array( $wp_widget_factory->widgets['WP_Widget_Recent_Comments'], 'recent_comments_style' ) );
 }
 add_action( 'widgets_init', 'twentyten_remove_recent_comments_style' );
+
+/**
+ * Get the URL of the next image in a gallery for attachment pages
+ */
+function twentyten_get_next_attachment_url() {
+	global $post;
+	$post = get_post($post);
+	$attachments = array_values( get_children( array( 'post_parent' => $post->post_parent, 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC', 'orderby' => 'menu_order ID' ) ) );
+ 
+	foreach ( $attachments as $k => $attachment ) {
+		if ( $attachment->ID == $post->ID )
+			break;
+	}
+	$k++;
+	if ( isset( $attachments[ $k ] ) )
+		return get_attachment_link( $attachments[ $k ]->ID );
+	else
+		return get_permalink( $post->post_parent );
+}

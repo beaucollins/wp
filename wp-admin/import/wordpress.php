@@ -45,7 +45,7 @@ class WP_Import {
 
 	function greet() {
 		echo '<div class="narrow">';
-		echo '<p>'.__('Howdy! Upload your WordPress eXtended RSS (WXR) file and we&#8217;ll import the posts, pages, comments, custom fields, categories, and tags into this blog.').'</p>';
+		echo '<p>'.__('Howdy! Upload your WordPress eXtended RSS (WXR) file and we&#8217;ll import the posts, pages, comments, custom fields, categories, and tags into this site.').'</p>';
 		echo '<p>'.__('Choose a WordPress WXR file to upload, then click Upload file and import.').'</p>';
 		wp_import_upload_form("admin.php?import=wordpress&amp;step=1");
 		echo '</div>';
@@ -319,7 +319,7 @@ class WP_Import {
 
 			$catarr = compact('category_nicename', 'category_parent', 'posts_private', 'links_private', 'posts_private', 'cat_name', 'category_description');
 
-			print "<em>" . __( "Importing category $cat_name" ) . "</em><br />\n";
+			print '<em>' . sprintf( __( 'Importing category <em>%s</em>&#8230;' ), esc_html($cat_name) ) . '</em><br />' . "\n";
 			$cat_ID = wp_insert_category($catarr);
 		}
 	}
@@ -341,7 +341,7 @@ class WP_Import {
 
 			$tagarr = compact('slug', 'description');
 
-			print "<em>" . __( "Importing tag $tag_name" ) . "</em><br />\n";
+			print '<em>' . sprintf( __( 'Importing tag <em>%s</em>&#8230;' ), esc_html($tag_name) ) . '</em><br />' . "\n";
 			$tag_ID = wp_insert_term($tag_name, 'post_tag', $tagarr);
 		}
 	}
@@ -379,7 +379,7 @@ class WP_Import {
 
 			$termarr = compact('slug', 'description');
 
-			print "<em>" . __( "Importing $term_name" ) . "</em><br />\n";
+			print '<em>' . sprintf( __( 'Importing <em>%s</em>&#8230;' ), esc_html($term_name) ) . '</em><br />' . "\n";
 			$term_ID = wp_insert_term($term_name, $this->get_tag( $c, 'wp:term_taxonomy' ), $termarr);
 		}
 	}
@@ -472,8 +472,8 @@ class WP_Import {
 			$post_parent = (int) $post_parent;
 			if ($post_parent) {
 				// if we already know the parent, map it to the local ID
-				if ( $parent = $this->post_ids_processed[$post_parent] ) {
-					$post_parent = $parent;  // new ID of the parent
+				if ( isset( $this->post_ids_processed[$post_parent] ) ) {
+					$post_parent = $this->post_ids_processed[$post_parent];  // new ID of the parent
 				}
 				else {
 					// record the parent for later
@@ -760,8 +760,12 @@ class WP_Import {
 		global $wpdb;
 
 		foreach ($this->orphans as $child_id => $parent_id) {
-			$local_child_id = $this->post_ids_processed[$child_id];
-			$local_parent_id = $this->post_ids_processed[$parent_id];
+			$local_child_id = $local_parent_id = false;
+			if ( isset( $this->post_ids_processed[$child_id] ) )
+				$local_child_id = $this->post_ids_processed[$child_id];
+			if ( isset( $this->post_ids_processed[$parent_id] ) )
+				$local_parent_id = $this->post_ids_processed[$parent_id];
+
 			if ($local_child_id and $local_parent_id) {
 				$wpdb->update($wpdb->posts, array('post_parent' => $local_parent_id), array('ID' => $local_child_id) );
 			}

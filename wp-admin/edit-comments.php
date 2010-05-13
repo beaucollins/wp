@@ -293,7 +293,6 @@ $page_links = paginate_links( array(
 
 <div class="tablenav">
 
-<?php if ( $comments ) { ?>
 <?php if ( $page_links ) : ?>
 <div class="tablenav-pages"><?php $page_links_text = sprintf( '<span class="displaying-num">' . __( 'Displaying %s&#8211;%s of %s' ) . '</span>%s',
 	number_format_i18n( $start + 1 ),
@@ -306,6 +305,7 @@ $page_links = paginate_links( array(
 <input type="hidden" name="_page" value="<?php echo esc_attr($page); ?>" />
 <?php endif; ?>
 
+<?php if ( $comments ) : ?>
 <div class="alignleft actions">
 <select name="action">
 <option value="-1" selected="selected"><?php _e('Bulk Actions') ?></option>
@@ -316,12 +316,12 @@ $page_links = paginate_links( array(
 <option value="approve"><?php _e('Approve'); ?></option>
 <?php endif; ?>
 <?php if ( 'all' == $comment_status || 'approved' == $comment_status || 'moderated' == $comment_status ): ?>
-<option value="spam"><?php _e('Mark as Spam'); ?></option>
+<option value="spam"><?php echo _x('Mark as Spam', 'comment'); ?></option>
 <?php endif; ?>
 <?php if ( 'trash' == $comment_status ): ?>
 <option value="untrash"><?php _e('Restore'); ?></option>
 <?php elseif ( 'spam' == $comment_status ): ?>
-<option value="unspam"><?php _e('Not Spam'); ?></option>
+<option value="unspam"><?php echo _x('Not Spam', 'comment'); ?></option>
 <?php endif; ?>
 <?php if ( 'trash' == $comment_status || 'spam' == $comment_status || !EMPTY_TRASH_DAYS ): ?>
 <option value="delete"><?php _e('Delete Permanently'); ?></option>
@@ -331,6 +331,8 @@ $page_links = paginate_links( array(
 </select>
 <input type="submit" name="doaction" id="doaction" value="<?php esc_attr_e('Apply'); ?>" class="button-secondary apply" />
 <?php wp_nonce_field('bulk-comments'); ?>
+
+<?php endif; ?>
 
 <select name="comment_type">
 	<option value="all"><?php _e('Show all comment types'); ?></option>
@@ -369,6 +371,7 @@ if ( ( 'spam' == $comment_status || 'trash' == $comment_status) && current_user_
 </div>
 
 <div class="clear"></div>
+<?php if ( $comments ) { ?>
 
 <table class="widefat comments fixed" cellspacing="0">
 <thead>
@@ -413,7 +416,7 @@ if ( $page_links )
 <option value="approve"><?php _e('Approve'); ?></option>
 <?php endif; ?>
 <?php if ( 'all' == $comment_status || 'approved' == $comment_status || 'moderated' == $comment_status ): ?>
-<option value="spam"><?php _e('Mark as Spam'); ?></option>
+<option value="spam"><?php echo _x('Mark as Spam', 'comment'); ?></option>
 <?php endif; ?>
 <?php if ( 'trash' == $comment_status ): ?>
 <option value="untrash"><?php _e('Restore'); ?></option>
@@ -421,7 +424,7 @@ if ( $page_links )
 <?php if ( 'trash' == $comment_status || 'spam' == $comment_status || !EMPTY_TRASH_DAYS ): ?>
 <option value="delete"><?php _e('Delete Permanently'); ?></option>
 <?php elseif ( 'spam' == $comment_status ): ?>
-<option value="unspam"><?php _e('Not Spam'); ?></option>
+<option value="unspam"><?php echo _x('Not Spam', 'comment'); ?></option>
 <?php else: ?>
 <option value="trash"><?php _e('Move to Trash'); ?></option>
 <?php endif; ?>
@@ -456,10 +459,12 @@ if ( $page_links )
 
 <?php } elseif ( 'moderated' == $comment_status ) { ?>
 <p><?php _e('No comments awaiting moderation&hellip; yet.') ?></p>
+</div>
 </form>
 
 <?php } else { ?>
 <p><?php _e('No comments found.') ?></p>
+</div>
 </form>
 
 <?php } ?>

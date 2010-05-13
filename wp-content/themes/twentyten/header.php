@@ -19,11 +19,14 @@
 		if ( is_single() ) {
 			single_post_title(); echo ' | '; bloginfo( 'name' );
 		} elseif ( is_home() || is_front_page() ) {
-			bloginfo( 'name' ); echo ' | '; bloginfo( 'description' ); twentyten_the_page_number();
+			bloginfo( 'name' ); 
+			if( get_bloginfo( 'description' ) ) 
+				echo ' | ' ; bloginfo( 'description' ); 
+			twentyten_the_page_number();
 		} elseif ( is_page() ) {
 			single_post_title( '' ); echo ' | '; bloginfo( 'name' );
 		} elseif ( is_search() ) {
-			printf( __( 'Search results for "%s"', 'twentyten' ), esc_html( $s ) ); twentyten_the_page_number(); echo ' | '; bloginfo( 'name' );
+			printf( __( 'Search results for "%s"', 'twentyten' ), get_search_query() ); twentyten_the_page_number(); echo ' | '; bloginfo( 'name' );
 		} elseif ( is_404() ) {
 			_e( 'Not Found', 'twentyten' ); echo ' | '; bloginfo( 'name' );
 		} else {
@@ -32,7 +35,7 @@
 	?></title>
 	<link rel="profile" href="http://gmpg.org/xfn/11" />
 	<link rel="stylesheet" type="text/css" media="all" href="<?php bloginfo( 'stylesheet_url' ); ?>" />
-	<?php if ( is_singular() ) wp_enqueue_script( 'comment-reply' ); ?>
+	<?php if ( is_singular() && get_option('thread_comments') ) wp_enqueue_script( 'comment-reply' ); ?>
 	<link rel="pingback" href="<?php bloginfo( 'pingback_url' ); ?>" />
 	<?php wp_head(); ?>
 </head>
@@ -52,7 +55,7 @@
 
 				<?php
 					// Check if this is a post or page, if it has a thumbnail, and if it's a big one
-					if ( 	is_singular() &&
+					if ( is_singular() &&
 							has_post_thumbnail( $post->ID ) &&
 							( /* $src, $width, $height */ $image = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ), 'post-thumbnail') ) &&
 							$image[1] >= HEADER_IMAGE_WIDTH ) :

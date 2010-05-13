@@ -30,9 +30,9 @@ function check_upload_size( $file ) {
 	$space_left = $space_allowed - $space_used;
 	$file_size = filesize( $file['tmp_name'] );
 	if ( $space_left < $file_size )
-		$file['error'] = sprintf( __( 'Not enough space to upload. %1$s Kb needed.' ), number_format( ($file_size - $space_left) /1024 ) );
+		$file['error'] = sprintf( __( 'Not enough space to upload. %1$s KB needed.' ), number_format( ($file_size - $space_left) /1024 ) );
 	if ( $file_size > ( 1024 * get_site_option( 'fileupload_maxk', 1500 ) ) )
-		$file['error'] = sprintf(__('This file is too big. Files must be less than %1$s Kb in size.'), get_site_option( 'fileupload_maxk', 1500 ) );
+		$file['error'] = sprintf(__('This file is too big. Files must be less than %1$s KB in size.'), get_site_option( 'fileupload_maxk', 1500 ) );
 	if ( upload_is_user_over_quota( false ) ) {
 		$file['error'] = __( 'You have used your space quota. Please delete files before uploading.' );
 	}
@@ -77,6 +77,9 @@ function wpmu_delete_blog( $blog_id, $drop = false ) {
 	update_blog_status( $blog_id, 'deleted', 1 );
 
 	if ( $drop ) {
+		if ( substr( $blog_prefix, -1 ) == '_' )
+			$blog_prefix =  substr( $blog_prefix, 0, -1 ) . '\_';
+
 		$drop_tables = $wpdb->get_results( "SHOW TABLES LIKE '{$blog_prefix}%'", ARRAY_A );
 		$drop_tables = apply_filters( 'wpmu_drop_tables', $drop_tables );
 
@@ -187,7 +190,7 @@ function confirm_delete_users( $users ) {
 	<input type="hidden" name="dodelete" />
     <?php
 	wp_nonce_field( 'ms-users-delete' );
-	$site_admins = get_site_option( 'site_admins', array( 'admin' ) );
+	$site_admins = get_super_admins();
 	$admin_out = "<option value='$current_user->ID'>$current_user->user_login</option>";
 
 	foreach ( ( $allusers = (array) $_POST['allusers'] ) as $key => $val ) {
@@ -270,6 +273,7 @@ function wpmu_get_blog_allowedthemes( $blog_id = 0 ) {
 }
 
 function update_option_new_admin_email( $old_value, $value ) {
+	$email = get_option( 'admin_email' );
 	if ( $value == get_option( 'admin_email' ) || !is_email( $value ) )
 		return;
 
@@ -304,6 +308,7 @@ All at ###SITENAME###
 	wp_mail( $value, sprintf( __( '[%s] New Admin Email Address' ), get_option( 'blogname' ) ), $content );
 }
 add_action( 'update_option_new_admin_email', 'update_option_new_admin_email', 10, 2 );
+add_action( 'add_option_new_admin_email', 'update_option_new_admin_email', 10, 2 );
 
 function send_confirmation_on_profile_email() {
 	global $errors, $wpdb, $current_user;
@@ -361,7 +366,7 @@ add_action( 'personal_options_update', 'send_confirmation_on_profile_email' );
 function new_user_email_admin_notice() {
 	global $current_user;
 	if ( strpos( $_SERVER['PHP_SELF'], 'profile.php' ) && isset( $_GET['updated'] ) && $email = get_option( $current_user->ID . '_new_email' ) )
-		echo "<div id='update-nag'>" . sprintf( __( "Your email address has not been updated yet. Please check your inbox at %s for a confirmation email." ), $email['newemail'] ) . "</div>";
+		echo "<div class='update-nag'>" . sprintf( __( "Your email address has not been updated yet. Please check your inbox at %s for a confirmation email." ), $email['newemail'] ) . "</div>";
 }
 add_action( 'admin_notices', 'new_user_email_admin_notice' );
 
@@ -388,17 +393,38 @@ function get_site_allowed_themes() {
 /**
  * Determines if there is any upload space left in the current blog's quota.
  *
+ * @since 3.0.0
  * @return bool True if space is available, false otherwise.
  */
 function is_upload_space_available() {
 	if ( get_site_option( 'upload_space_check_disabled' ) )
 		return true;
 
-	$space_allowed = get_space_allowed();
+	if ( !( $space_allowed = get_upload_space_available() ) )
+		return false;
+
+	return true;
+}
+
+/*
+ * @since 3.0.0
+ */
+function upload_size_limit_filter( $size ) {
+	return min( $size, get_upload_space_available() );
+}
+/**
+ * Determines if there is any upload space left in the current blog's quota.
+ *
+ * @return int of upload space available in bytes
+ */
+function get_upload_space_available() {
+	$space_allowed = get_space_allowed() * 1024 * 1024;
+	if ( get_site_option( 'upload_space_check_disabled' ) )
+		return $space_allowed;
 
 	$dir_name = trailingslashit( BLOGUPLOADDIR );
 	if ( !( is_dir( $dir_name) && is_readable( $dir_name ) ) )
-		return true;
+		return $space_allowed;
 
   	$dir = dir( $dir_name );
    	$size = 0;
@@ -413,12 +439,11 @@ function is_upload_space_available() {
 		}
 	}
 	$dir->close();
-	$size = $size / 1024 / 1024;
 
 	if ( ( $space_allowed - $size ) <= 0 )
-		return false;
+		return 0;
 
-	return true;
+	return $space_allowed - $size;
 }
 
 /**
@@ -440,19 +465,18 @@ function display_space_usage() {
 	$space = get_space_allowed();
 	$used = get_dirsize( BLOGUPLOADDIR ) / 1024 / 1024;
 
-	if ( $used > $space )
-		$percentused = '100';
-	else
-		$percentused = ( $used / $space ) * 100;
+	$percentused = ( $used / $space ) * 100;
 
 	if ( $space > 1000 ) {
 		$space = number_format( $space / 1024 );
+		/* translators: Gigabytes */
 		$space .= __( 'GB' );
 	} else {
+		/* translators: Megabytes */
 		$space .= __( 'MB' );
 	}
 	?>
-	<strong><?php printf( __( 'Used: %1s%% of %2s' ), number_format( $percentused ), $space );?></strong>
+	<strong><?php printf( __( 'Used: %1s%% of %2s' ), number_format( $percentused ), $space ); ?></strong>
 	<?php
 }
 
@@ -542,7 +566,7 @@ function refresh_user_details( $id ) {
 
 function format_code_lang( $code = '' ) {
 	$code = strtolower( substr( $code, 0, 2 ) );
-	$lang_codes = array( 
+	$lang_codes = array(
 		'aa' => 'Afar', 'ab' => 'Abkhazian', 'af' => 'Afrikaans', 'ak' => 'Akan', 'sq' => 'Albanian', 'am' => 'Amharic', 'ar' => 'Arabic', 'an' => 'Aragonese', 'hy' => 'Armenian', 'as' => 'Assamese', 'av' => 'Avaric', 'ae' => 'Avestan', 'ay' => 'Aymara', 'az' => 'Azerbaijani', 'ba' => 'Bashkir', 'bm' => 'Bambara', 'eu' => 'Basque', 'be' => 'Belarusian', 'bn' => 'Bengali',
 		'bh' => 'Bihari', 'bi' => 'Bislama', 'bs' => 'Bosnian', 'br' => 'Breton', 'bg' => 'Bulgarian', 'my' => 'Burmese', 'ca' => 'Catalan; Valencian', 'ch' => 'Chamorro', 'ce' => 'Chechen', 'zh' => 'Chinese', 'cu' => 'Church Slavic; Old Slavonic; Church Slavonic; Old Bulgarian; Old Church Slavonic', 'cv' => 'Chuvash', 'kw' => 'Cornish', 'co' => 'Corsican', 'cr' => 'Cree',
 		'cs' => 'Czech', 'da' => 'Danish', 'dv' => 'Divehi; Dhivehi; Maldivian', 'nl' => 'Dutch; Flemish', 'dz' => 'Dzongkha', 'en' => 'English', 'eo' => 'Esperanto', 'et' => 'Estonian', 'ee' => 'Ewe', 'fo' => 'Faroese', 'fj' => 'Fijjian', 'fi' => 'Finnish', 'fr' => 'French', 'fy' => 'Western Frisian', 'ff' => 'Fulah', 'ka' => 'Georgian', 'de' => 'German', 'gd' => 'Gaelic; Scottish Gaelic',
@@ -626,7 +650,7 @@ function mu_dropdown_languages( $lang_files = array(), $current = '' ) {
 
 		if ( $code_lang == 'en_US' ) { // American English
 			$flag = true;
-			$ae = __( 'American English' ); 
+			$ae = __( 'American English' );
 			$output[$ae] = '<option value="' . esc_attr( $code_lang ) . '"' . selected( $current, $code_lang ) . '> ' . $ae . '</option>';
 		} elseif ( $code_lang == 'en_GB' ) { // British English
 			$flag = true;
@@ -653,17 +677,18 @@ function mu_dropdown_languages( $lang_files = array(), $current = '' ) {
 function secret_salt_warning() {
 	if ( !is_super_admin() )
 		return;
-	$secret_keys = array( 'NONCE_KEY', 'NONCE_SALT', 'AUTH_KEY', 'AUTH_SALT', 'LOGGED_IN_KEY', 'LOGGED_IN_SALT', 'SECURE_AUTH_KEY', 'SECURE_AUTH_SALT' );
+	$secret_keys = array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT' );
 	$out = '';
 	foreach( $secret_keys as $key ) {
-		if ( !defined( $key ) )
-			$out .= "define( '$key', '" . wp_generate_password() . wp_generate_password() . "' );<br />";
+		if ( ! defined( $key ) )
+			$out .= "define( '$key', '" . esc_html( wp_generate_password( 64, true, true ) ) . "' );<br />";
 	}
 	if ( $out != '' ) {
-		$msg = sprintf( __( 'Warning! WordPress encrypts user cookies, but you must add the following lines to <strong>%swp-config.php</strong> for it to be more secure.<br />Please add the code before the line, <code>/* That\'s all, stop editing! Happy blogging. */</code>' ), ABSPATH );
-		$msg .= "<blockquote>$out</blockquote>";
+		$msg  = __( 'Warning! WordPress encrypts user cookies, but you must add the following lines to <strong>wp-config.php</strong> for it to be more secure.' );
+		$msg .= '<br/>' . __( "Before the line <code>/* That's all, stop editing! Happy blogging. */</code> please add this code:" );
+		$msg .= "<br/><br/><code>$out</code>";
 
-		echo "<div id='update-nag'>$msg</div>";
+		echo "<div class='update-nag'>$msg</div>";
 	}
 }
 add_action( 'admin_notices', 'secret_salt_warning' );
@@ -694,7 +719,7 @@ function admin_notice_feed() {
 		$msg .= "<p>" . $content . "<a href='$link'>" . __( 'Read More' ) . "</a> <a href='index.php?feed_dismiss=" . md5( $title ) . "'>" . __( 'Dismiss' ) . "</a></p>";
 		echo "<div class='updated'>$msg</div>";
 	} elseif ( is_super_admin() ) {
-		printf( '<div id="update-nag">' . __( 'Your feed at %s is empty.' ) . '</div>', esc_html( $url ) );
+		printf( '<div class="update-nag">' . __( 'Your feed at %s is empty.' ) . '</div>', esc_html( $url ) );
 	}
 }
 add_action( 'admin_notices', 'admin_notice_feed' );
@@ -704,7 +729,7 @@ function site_admin_notice() {
 	if ( !is_super_admin() )
 		return false;
 	if ( get_site_option( 'wpmu_upgrade_site' ) != $wp_db_version )
-		echo "<div id='update-nag'>" . sprintf( __( 'Thank you for Updating! Please visit the <a href="%s">Update Network</a> page to update all your sites.' ), esc_url( admin_url( 'ms-upgrade-network.php' ) ) ) . "</div>";
+		echo "<div class='update-nag'>" . sprintf( __( 'Thank you for Updating! Please visit the <a href="%s">Update Network</a> page to update all your sites.' ), esc_url( admin_url( 'ms-upgrade-network.php' ) ) ) . "</div>";
 }
 add_action( 'admin_notices', 'site_admin_notice' );
 
@@ -777,7 +802,7 @@ function show_post_thumbnail_warning() {
 		return;
 	$mu_media_buttons = get_site_option( 'mu_media_buttons', array() );
 	if ( empty($mu_media_buttons['image']) && current_theme_supports( 'post-thumbnails' ) ) {
-		echo "<div id='update-nag'>" . sprintf( __( "Warning! The current theme supports Featured Images. You must enable image uploads on <a href='%s'>the options page</a> for it to work." ), esc_url( admin_url( 'ms-options.php' ) ) ) . "</div>";
+		echo "<div class='update-nag'>" . sprintf( __( "Warning! The current theme supports Featured Images. You must enable image uploads on <a href='%s'>the options page</a> for it to work." ), esc_url( admin_url( 'ms-options.php' ) ) ) . "</div>";
 	}
 }
 add_action( 'admin_notices', 'show_post_thumbnail_warning' );
@@ -787,7 +812,7 @@ function ms_deprecated_blogs_file() {
 		return;
 	if ( ! file_exists( WP_CONTENT_DIR . '/blogs.php' ) )
 		return;
-	echo '<div id="update-nag">' . sprintf( __( 'The <code>%1$s</code> file is deprecated. Please remove it and update your server rewrite rules to use <code>%2$s</code> instead.' ), 'wp-content/blogs.php', 'wp-includes/ms-files.php' ) . '</div>';
+	echo '<div class="update-nag">' . sprintf( __( 'The <code>%1$s</code> file is deprecated. Please remove it and update your server rewrite rules to use <code>%2$s</code> instead.' ), 'wp-content/blogs.php', 'wp-includes/ms-files.php' ) . '</div>';
 }
 add_action( 'admin_notices', 'ms_deprecated_blogs_file' );
 
@@ -809,8 +834,15 @@ function _admin_notice_multisite_activate_plugins_page() {
  * @param $user_id
  */
 function grant_super_admin( $user_id ) {
+	global $super_admins;
+
+	// If global super_admins override is defined, there is nothing to do here.
+	if ( isset($super_admins) )
+		return false;
+
 	do_action( 'grant_super_admin', $user_id );
 
+	// Directly fetch site_admins instead of using get_super_admins()
 	$super_admins = get_site_option( 'site_admins', array( 'admin' ) );
 
 	$user = new WP_User( $user_id );
@@ -830,9 +862,17 @@ function grant_super_admin( $user_id ) {
  * @param $user_id
  */
 function revoke_super_admin( $user_id ) {
+	global $super_admins;
+
+	// If global super_admins override is defined, there is nothing to do here.
+	if ( isset($super_admins) )
+		return false;
+
 	do_action( 'revoke_super_admin', $user_id );
 
+	// Directly fetch site_admins instead of using get_super_admins()
 	$super_admins = get_site_option( 'site_admins', array( 'admin' ) );
+
 	$user = new WP_User( $user_id );
 	if ( $user->user_email != get_site_option( 'admin_email' ) ) {
 		if ( false !== ( $key = array_search( $user->user_login, $super_admins ) ) ) {

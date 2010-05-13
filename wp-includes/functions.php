@@ -126,23 +126,18 @@ function date_i18n( $dateformatstring, $unixtimestamp = false, $gmt = false ) {
 }
 
 /**
- * Convert number to format based on the locale.
+ * Convert integer number to format based on the locale.
  *
  * @since 2.3.0
  *
- * @param mixed $number The number to convert based on locale.
+ * @param int $number The number to convert based on locale.
  * @param int $decimals Precision of the number of decimal places.
  * @return string Converted number in string format.
  */
-function number_format_i18n( $number, $decimals = null ) {
+function number_format_i18n( $number, $decimals = 0 ) {
 	global $wp_locale;
-	// let the user override the precision only
-	$decimals = ( is_null( $decimals ) ) ? $wp_locale->number_format['decimals'] : intval( $decimals );
-
-	$num = number_format( $number, $decimals, $wp_locale->number_format['decimal_point'], $wp_locale->number_format['thousands_sep'] );
-
-	// let the user translate digits from latin to localized language
-	return apply_filters( 'number_format_i18n', $num );
+	$formatted = number_format( $number, absint( $decimals ), $wp_locale->number_format['decimal_point'], $wp_locale->number_format['thousands_sep'] );
+	return apply_filters( 'number_format_i18n', $formatted );
 }
 
 /**
@@ -163,10 +158,10 @@ function number_format_i18n( $number, $decimals = null ) {
  * @since 2.3.0
  *
  * @param int|string $bytes Number of bytes. Note max integer size for integers.
- * @param int $decimals Precision of number of decimal places.
+ * @param int $decimals Precision of number of decimal places. Deprecated.
  * @return bool|string False on failure. Number string on success.
  */
-function size_format( $bytes, $decimals = null ) {
+function size_format( $bytes, $decimals = 0 ) {
 	$quant = array(
 		// ========================= Origin ====
 		'TB' => 1099511627776,  // pow( 1024, 4)
@@ -175,7 +170,6 @@ function size_format( $bytes, $decimals = null ) {
 		'kB' => 1024,           // pow( 1024, 1)
 		'B ' => 1,              // pow( 1024, 0)
 	);
-
 	foreach ( $quant as $unit => $mag )
 		if ( doubleval($bytes) >= $mag )
 			return number_format_i18n( $bytes / $mag, $decimals ) . ' ' . $unit;
@@ -198,24 +192,15 @@ function get_weekstartend( $mysqlstring, $start_of_week = '' ) {
 	$md = substr( $mysqlstring, 5, 2 ); // Mysql string day
 	$day = mktime( 0, 0, 0, $md, $mm, $my ); // The timestamp for mysqlstring day.
 	$weekday = date( 'w', $day ); // The day of the week from the timestamp
-	$i = 86400; // One day
 	if ( !is_numeric($start_of_week) )
 		$start_of_week = get_option( 'start_of_week' );
 
 	if ( $weekday < $start_of_week )
-		$weekday = 7 - $start_of_week - $weekday;
+		$weekday += 7;
 
-	while ( $weekday > $start_of_week ) {
-		$weekday = date( 'w', $day );
-		if ( $weekday < $start_of_week )
-			$weekday = 7 - $start_of_week - $weekday;
-
-		$day -= 86400;
-		$i = 0;
-	}
-	$week['start'] = $day + 86400 - $i;
-	$week['end'] = $week['start'] + 604799;
-	return $week;
+	$start = $day - 86400 * ( $weekday - $start_of_week ); // The most recent week start day on or before $day
+	$end = $start + 604799; // $start + 7 days - 1 second
+	return compact( 'start', 'end' );
 }
 
 /**
@@ -322,41 +307,44 @@ function get_option( $option, $default = false ) {
 	if ( empty($option) )
 		return false;
 
-	// prevent non-existent options from triggering multiple queries
-	if ( defined( 'WP_INSTALLING' ) && is_multisite() ) {
-		$notoptions = array();
-	} else {
+	if ( defined( 'WP_SETUP_CONFIG' ) )
+		return false;
+
+	if ( ! defined( 'WP_INSTALLING' ) ) {
+		// prevent non-existent options from triggering multiple queries
 		$notoptions = wp_cache_get( 'notoptions', 'options' );
 		if ( isset( $notoptions[$option] ) )
 			return $default;
-	}
 
-	if ( ! defined( 'WP_INSTALLING' ) ) {
 		$alloptions = wp_load_alloptions();
-	}
 
-	if ( isset( $alloptions[$option] ) ) {
-		$value = $alloptions[$option];
-	} else {
-		$value = wp_cache_get( $option, 'options' );
+		if ( isset( $alloptions[$option] ) ) {
+			$value = $alloptions[$option];
+		} else {
+			$value = wp_cache_get( $option, 'options' );
 
-		if ( false === $value ) {
-			if ( defined( 'WP_INSTALLING' ) )
-				$suppress = $wpdb->suppress_errors();
-			$row = $wpdb->get_row( $wpdb->prepare( "SELECT option_value FROM $wpdb->options WHERE option_name = '%s' LIMIT 1", $option ) );
-			if ( defined( 'WP_INSTALLING' ) )
-				$wpdb->suppress_errors( $suppress );
+			if ( false === $value ) {
+				$row = $wpdb->get_row( $wpdb->prepare( "SELECT option_value FROM $wpdb->options WHERE option_name = %s LIMIT 1", $option ) );
 
-			// Has to be get_row instead of get_var because of funkiness with 0, false, null values
-			if ( is_object( $row ) ) {
-				$value = $row->option_value;
-				wp_cache_add( $option, $value, 'options' );
-			} else { // option does not exist, so we must cache its non-existence
-				$notoptions[$option] = true;
-				wp_cache_set( 'notoptions', $notoptions, 'options' );
-				return $default;
+				// Has to be get_row instead of get_var because of funkiness with 0, false, null values
+				if ( is_object( $row ) ) {
+					$value = $row->option_value;
+					wp_cache_add( $option, $value, 'options' );
+				} else { // option does not exist, so we must cache its non-existence
+					$notoptions[$option] = true;
+					wp_cache_set( 'notoptions', $notoptions, 'options' );
+					return $default;
+				}
 			}
 		}
+	} else {
+		$suppress = $wpdb->suppress_errors();
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT option_value FROM $wpdb->options WHERE option_name = %s LIMIT 1", $option ) );
+		$wpdb->suppress_errors( $suppress );
+		if ( is_object( $row ) )
+			$value = $row->option_value;
+		else
+			return $default;
 	}
 
 	// If home is not set use siteurl.
@@ -635,15 +623,15 @@ function delete_option( $option ) {
 	wp_protect_special_option( $option );
 
 	// Get the ID, if no ID then return
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT autoload FROM $wpdb->options WHERE option_name = '%s'", $option ) );
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT autoload FROM $wpdb->options WHERE option_name = %s", $option ) );
 	if ( is_null( $row ) )
 		return false;
 	do_action( 'delete_option', $option );
-	$result = $wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->options WHERE option_name = '%s'", $option) );
+	$result = $wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->options WHERE option_name = %s", $option) );
 	if ( ! defined( 'WP_INSTALLING' ) ) {
 		if ( 'yes' == $row->autoload ) {
 			$alloptions = wp_load_alloptions();
-			if ( isset( $alloptions[$option] ) ) {
+			if ( is_array( $alloptions ) && isset( $alloptions[$option] ) ) {
 				unset( $alloptions[$option] );
 				wp_cache_set( 'alloptions', $alloptions, 'options' );
 			}
@@ -1923,7 +1911,7 @@ function wp_nonce_field( $action = -1, $name = "_wpnonce", $referer = true , $ec
 		echo $nonce_field;
 
 	if ( $referer )
-		wp_referer_field( $echo, 'previous' );
+		wp_referer_field( $echo );
 
 	return $nonce_field;
 }
@@ -1941,7 +1929,7 @@ function wp_nonce_field( $action = -1, $name = "_wpnonce", $referer = true , $ec
  * @param bool $echo Whether to echo or return the referer field.
  * @return string Referer field.
  */
-function wp_referer_field( $echo = true) {
+function wp_referer_field( $echo = true ) {
 	$ref = esc_attr( $_SERVER['REQUEST_URI'] );
 	$referer_field = '<input type="hidden" name="_wp_http_referer" value="'. $ref . '" />';
 
@@ -2025,7 +2013,7 @@ function wp_mkdir_p( $target ) {
 	$target = str_replace( '//', '/', $target );
 
 	// safe mode fails with a trailing slash under certain PHP versions.
-	$target = untrailingslashit($target);
+	$target = rtrim($target, '/'); // Use rtrim() instead of untrailingslashit to avoid formatting.php dependency.
 	if ( empty($target) )
 		$target = '/';
 
@@ -2125,6 +2113,7 @@ function path_join( $base, $path ) {
  * @return array See above for description.
  */
 function wp_upload_dir( $time = null ) {
+	global $switched;
 	$siteurl = get_option( 'siteurl' );
 	$upload_path = get_option( 'upload_path' );
 	$upload_path = trim($upload_path);
@@ -2147,12 +2136,12 @@ function wp_upload_dir( $time = null ) {
 			$url = trailingslashit( $siteurl ) . $upload_path;
 	}
 
-	if ( defined('UPLOADS') && ( WP_CONTENT_DIR . '/uploads' != ABSPATH . $upload_path ) ) {
+	if ( defined('UPLOADS') && ( WP_CONTENT_DIR . '/uploads' != ABSPATH . $upload_path ) && ( !isset( $switched ) || $switched === false ) ) {
 		$dir = ABSPATH . UPLOADS;
 		$url = trailingslashit( $siteurl ) . UPLOADS;
 	}
 
-	if ( is_multisite() && ( WP_CONTENT_DIR . '/uploads' != ABSPATH . $upload_path ) ) {
+	if ( is_multisite() && ( WP_CONTENT_DIR . '/uploads' != ABSPATH . $upload_path ) && ( !isset( $switched ) || $switched === false ) ) {
 		if ( defined( 'BLOGUPLOADDIR' ) )
 			$dir = untrailingslashit(BLOGUPLOADDIR);
 		$url = str_replace( UPLOADS, 'files', $url );
@@ -2604,15 +2593,13 @@ function wp_die( $message, $title = '', $args = array() ) {
  * site then you can overload using the wp_die_handler filter in wp_die
  *
  * @since 3.0.0
- * @private
+ * @access private
  *
  * @param string $message Error message.
  * @param string $title Error title.
  * @param string|array $args Optional arguements to control behaviour.
  */
 function _default_wp_die_handler( $message, $title = '', $args = array() ) {
-	global $wp_locale;
-
 	$defaults = array( 'response' => 500 );
 	$r = wp_parse_args($args, $defaults);
 
@@ -2667,7 +2654,7 @@ function _default_wp_die_handler( $message, $title = '', $args = array() ) {
 	$text_direction = 'ltr';
 	if ( isset($r['text_direction']) && 'rtl' == $r['text_direction'] )
 		$text_direction = 'rtl';
-	elseif ( isset($wp_locale ) && 'rtl' == $wp_locale->text_direction )
+	elseif ( function_exists( 'is_rtl' ) && is_rtl() )
 		$text_direction = 'rtl';
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -2749,9 +2736,7 @@ function _config_wp_siteurl( $url = '' ) {
  * @return array Direction set for 'rtl', if needed by locale.
  */
 function _mce_set_direction( $input ) {
-	global $wp_locale;
-
-	if ( 'rtl' == $wp_locale->text_direction ) {
+	if ( is_rtl() ) {
 		$input['directionality'] = 'rtl';
 		$input['plugins'] .= ',directionality';
 		$input['theme_advanced_buttons1'] .= ',ltr';
@@ -2919,7 +2904,7 @@ function wp_parse_id_list( $list ) {
  *
  * @param array $list An array of objects to filter
  * @param array $args An array of key => value arguments to match against each object
- * @param string $operator The logical operation to perform. 'or' means only one element 
+ * @param string $operator The logical operation to perform. 'or' means only one element
  *	from the array needs to match; 'and' means all elements must match. The default is 'and'.
  * @param bool|string $field A field from the object to place instead of the entire object
  * @return array A list of objects or object fields
@@ -2940,8 +2925,12 @@ function wp_filter_object_list( $list, $args = array(), $operator = 'and', $fiel
 
 	foreach ( $list as $key => $obj ) {
 		$matched = count(array_intersect_assoc(get_object_vars($obj), $args));
-		if ( ('and' == $operator && $matched == $count) || ('or' == $operator && $matched <= $count) )
-			$filtered[$key] = $field ? $obj->$field : $obj;
+		if ( ('and' == $operator && $matched == $count) || ('or' == $operator && $matched <= $count) ) {
+			if ( $field )
+				$filtered[] = $obj->$field;
+			else
+				$filtered[$key] = $obj;
+		}
 	}
 
 	return $filtered;
@@ -3461,9 +3450,12 @@ function get_site_option( $option, $default = false, $use_cache = true ) {
 			$value = wp_cache_get($cache_key, 'site-options');
 
 		if ( !isset($value) || (false === $value) ) {
-			$value = $wpdb->get_var( $wpdb->prepare("SELECT meta_value FROM $wpdb->sitemeta WHERE meta_key = %s AND site_id = %d", $option, $wpdb->siteid ) );
+			$row = $wpdb->get_row( $wpdb->prepare("SELECT meta_value FROM $wpdb->sitemeta WHERE meta_key = %s AND site_id = %d", $option, $wpdb->siteid ) );
 
-			if ( is_null($value) )
+			// Has to be get_row instead of get_var because of funkiness with 0, false, null values
+			if ( is_object( $row ) )
+				$value = $row->meta_value;
+			else
 				$value = $default;
 
 			$value = maybe_unserialize( $value );
@@ -3769,10 +3761,13 @@ function is_main_site( $blog_id = '' ) {
  * @return bool True if multisite and global terms enabled
  */
 function global_terms_enabled() {
-	if ( is_multisite() && '1' == get_site_option( 'global_terms_enabled' ) )
-		return true;
+	if ( ! is_multisite() )
+		return false;
 
-	return false;
+	static $global_terms = null;
+	if ( is_null( $global_terms ) )
+		$global_terms = (bool) get_site_option( 'global_terms_enabled' );
+	return $global_terms;
 }
 
 /**
@@ -4118,7 +4113,7 @@ function get_file_data( $file, $default_headers, $context = '' ) {
 /*
  * Used internally to tidy up the search terms
  *
- * @private
+ * @access private
  * @since 2.9.0
  *
  * @param string $t
@@ -4163,6 +4158,30 @@ function __return_false() {
  */
 function send_nosniff_header() {
 	@header( 'X-Content-Type-Options: nosniff' );
+}
+
+/**
+ * Returns a MySQL expression for selecting the week number based on the start_of_week option.
+ *
+ * @internal
+ * @since 3.0.0
+ * @param string $column
+ * @return string
+ */
+function _wp_mysql_week( $column ) {
+	switch ( $start_of_week = (int) get_option( 'start_of_week' ) ) {
+	default :
+	case 0 :
+		return "WEEK( $column, 0 )";
+	case 1 :
+		return "WEEK( $column, 1 )";
+	case 2 :
+	case 3 :
+	case 4 :
+	case 5 :
+	case 6 :
+		return "WEEK( DATE_SUB( $column, INTERVAL $start_of_week DAY ), 0 )";
+	}
 }
 
 ?>

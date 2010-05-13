@@ -321,7 +321,7 @@ function get_attachment_link($id = false) {
 	}
 
 	if ( ! $link )
-		$link = trailingslashit(get_bloginfo('url')) . "?attachment_id=$id";
+		$link = home_url( "/?attachment_id=$id" );
 
 	return apply_filters('attachment_link', $link, $id);
 }
@@ -2172,10 +2172,12 @@ function wp_get_shortlink($id = 0, $context = 'post', $allow_slugs = true) {
 
 	global $wp_query;
 	$post_id = 0;
-	if ( 'query' == $context && is_single() )
+	if ( 'query' == $context && is_single() ) {
 		$post_id = $wp_query->get_queried_object_id();
-	elseif ( 'post' == $context )
-		$post_id = $id;
+	} elseif ( 'post' == $context ) {
+		$post = get_post($id);
+		$post_id = $post->ID; 
+	}
 
 	$shortlink = '';
 
@@ -2199,12 +2201,12 @@ function wp_get_shortlink($id = 0, $context = 'post', $allow_slugs = true) {
  * @uses wp_get_shortlink()
  */
 function wp_shortlink_wp_head() {
-	$shortlink = wp_get_shortlink(0, 'query');
+	$shortlink = wp_get_shortlink( 0, 'query' );
 
-	if ( empty($shortlink) )
+	if ( empty( $shortlink ) )
 		return;
 
-	echo "<link rel='shortlink' href='" . $shortlink . "' />\n";
+	echo "<link rel='shortlink' href='" . esc_url_raw( $shortlink ) . "' />\n";
 }
 
 /**
@@ -2242,19 +2244,22 @@ function wp_shortlink_header() {
  * @param string $before Optional HTML to display before the link.
  * @param string $before Optional HTML to display after the link.
  */
-function the_shortlink($text = '', $title = '', $before = '', $after = '') {
+function the_shortlink( $text = '', $title = '', $before = '', $after = '' ) {
 	global $post;
 
-	if ( empty($text) )
+	if ( empty( $text ) )
 		$text = __('This is the short link.');
 
-	if ( empty($title) )
-		$title = the_title_attribute( array('echo' => FALSE) );
+	if ( empty( $title ) )
+		$title = the_title_attribute( array( 'echo' => FALSE ) );
 
-	$shortlink = wp_get_shortlink($post->ID);
+	$shortlink = wp_get_shortlink( $post->ID );
 
-	if ( !empty($shortlink) )
-		echo "$before<a rel='shortlink' href='$shortlink' title='$title'>$text</a>$after";
+	if ( !empty( $shortlink ) ) {
+		$link = '<a rel="shortlink" href="' . esc_url( $shortlink ) . '" title="' . $title . '">' . $text . '</a>';
+		$link = apply_filters( 'the_shortlink', $link, $shortlink, $text, $title );
+		echo $before, $link, $after;
+	}
 }
 
 ?>

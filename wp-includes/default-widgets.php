@@ -15,7 +15,7 @@
 class WP_Widget_Pages extends WP_Widget {
 
 	function WP_Widget_Pages() {
-		$widget_ops = array('classname' => 'widget_pages', 'description' => __( 'Your blog&#8217;s WordPress Pages') );
+		$widget_ops = array('classname' => 'widget_pages', 'description' => __( 'Your site&#8217;s WordPress Pages') );
 		$this->WP_Widget('pages', __('Pages'), $widget_ops);
 	}
 
@@ -172,7 +172,7 @@ class WP_Widget_Links extends WP_Widget {
 class WP_Widget_Search extends WP_Widget {
 
 	function WP_Widget_Search() {
-		$widget_ops = array('classname' => 'widget_search', 'description' => __( "A search form for your blog") );
+		$widget_ops = array('classname' => 'widget_search', 'description' => __( "A search form for your site") );
 		$this->WP_Widget('search', __('Search'), $widget_ops);
 	}
 
@@ -215,7 +215,7 @@ class WP_Widget_Search extends WP_Widget {
 class WP_Widget_Archives extends WP_Widget {
 
 	function WP_Widget_Archives() {
-		$widget_ops = array('classname' => 'widget_archive', 'description' => __( 'A monthly archive of your blog&#8217;s posts') );
+		$widget_ops = array('classname' => 'widget_archive', 'description' => __( 'A monthly archive of your site&#8217;s posts') );
 		$this->WP_Widget('archives', __('Archives'), $widget_ops);
 	}
 
@@ -328,7 +328,7 @@ class WP_Widget_Meta extends WP_Widget {
 class WP_Widget_Calendar extends WP_Widget {
 
 	function WP_Widget_Calendar() {
-		$widget_ops = array('classname' => 'widget_calendar', 'description' => __( 'A calendar of your blog&#8217;s posts') );
+		$widget_ops = array('classname' => 'widget_calendar', 'description' => __( 'A calendar of your site&#8217;s posts') );
 		$this->WP_Widget('calendar', __('Calendar'), $widget_ops);
 	}
 
@@ -511,7 +511,7 @@ class WP_Widget_Categories extends WP_Widget {
 class WP_Widget_Recent_Posts extends WP_Widget {
 
 	function WP_Widget_Recent_Posts() {
-		$widget_ops = array('classname' => 'widget_recent_entries', 'description' => __( "The most recent posts on your blog") );
+		$widget_ops = array('classname' => 'widget_recent_entries', 'description' => __( "The most recent posts on your site") );
 		$this->WP_Widget('recent-posts', __('Recent Posts'), $widget_ops);
 		$this->alt_option_name = 'widget_recent_entries';
 
@@ -558,7 +558,7 @@ class WP_Widget_Recent_Posts extends WP_Widget {
 		endif;
 
 		$cache[$args['widget_id']] = ob_get_flush();
-		wp_cache_add('widget_recent_posts', $cache, 'widget');
+		wp_cache_set('widget_recent_posts', $cache, 'widget');
 	}
 
 	function update( $new_instance, $old_instance ) {
@@ -588,7 +588,6 @@ class WP_Widget_Recent_Posts extends WP_Widget {
 
 		<p><label for="<?php echo $this->get_field_id('number'); ?>"><?php _e('Number of posts to show:'); ?></label>
 		<input id="<?php echo $this->get_field_id('number'); ?>" name="<?php echo $this->get_field_name('number'); ?>" type="text" value="<?php echo $number; ?>" size="3" /><br />
-		<small><?php _e('(at most 15)'); ?></small></p>
 <?php
 	}
 }
@@ -618,36 +617,48 @@ class WP_Widget_Recent_Comments extends WP_Widget {
 	}
 
 	function flush_widget_cache() {
-		wp_cache_delete('recent_comments', 'widget');
+		wp_cache_delete('widget_recent_comments', 'widget');
 	}
 
 	function widget( $args, $instance ) {
-		global $wpdb, $comments, $comment;
-
-		extract($args, EXTR_SKIP);
-		$title = apply_filters('widget_title', empty($instance['title']) ? __('Recent Comments') : $instance['title'], $instance, $this->id_base);
-		if ( !$number = (int) $instance['number'] )
-			$number = 5;
-		else if ( $number < 1 )
-			$number = 1;
-		else if ( $number > 15 )
-			$number = 15;
-
-		if ( !$comments = wp_cache_get( 'recent_comments', 'widget' ) ) {
-			$comments = $wpdb->get_results("SELECT $wpdb->comments.* FROM $wpdb->comments JOIN $wpdb->posts ON $wpdb->posts.ID = $wpdb->comments.comment_post_ID WHERE comment_approved = '1' AND post_status = 'publish' ORDER BY comment_date_gmt DESC LIMIT 15");
-			wp_cache_add( 'recent_comments', $comments, 'widget' );
+		global $comments, $comment;
+		
+		$cache = wp_cache_get('widget_recent_comments', 'widget');
+		
+		if ( ! is_array( $cache ) )
+			$cache = array();
+		
+		if ( isset( $cache[$args['widget_id']] ) ) {
+			echo $cache[$args['widget_id']];
+			return;
 		}
 
-		$comments = array_slice( (array) $comments, 0, $number );
-?>
-		<?php echo $before_widget; ?>
-			<?php if ( $title ) echo $before_title . $title . $after_title; ?>
-			<ul id="recentcomments"><?php
-			if ( $comments ) : foreach ( (array) $comments as $comment) :
-			echo  '<li class="recentcomments">' . /* translators: comments widget: 1: comment author, 2: post link */ sprintf(_x('%1$s on %2$s', 'widgets'), get_comment_author_link(), '<a href="' . esc_url( get_comment_link($comment->comment_ID) ) . '">' . get_the_title($comment->comment_post_ID) . '</a>') . '</li>';
-			endforeach; endif;?></ul>
-		<?php echo $after_widget; ?>
-<?php
+ 		extract($args, EXTR_SKIP);
+ 		$output = '';
+ 		$title = apply_filters('widget_title', empty($instance['title']) ? __('Recent Comments') : $instance['title']);
+
+		if ( ! $number = (int) $instance['number'] )
+ 			$number = 5;
+ 		else if ( $number < 1 )
+ 			$number = 1;
+
+		$comments = get_comments(array('number' => $number));
+		$output .= $before_widget;
+		if ( $title ) 
+			$output .= $before_title . $title . $after_title;
+
+		$output .= '<ul id="recentcomments">';
+		if ( $comments ) { 
+			foreach ( (array) $comments as $comment) {
+				$output .=  '<li class="recentcomments">' . /* translators: comments widget: 1: comment author, 2: post link */ sprintf(_x('%1$s on %2$s', 'widgets'), get_comment_author_link(), '<a href="' . esc_url( get_comment_link($comment->comment_ID) ) . '">' . get_the_title($comment->comment_post_ID) . '</a>') . '</li>';
+			}
+ 		}
+		$output .= '</ul>';
+		$output .= $after_widget;
+
+		echo $output;
+		$cache[$args['widget_id']] = $output;
+		wp_cache_set('widget_recent_comments', $cache, 'widget');
 	}
 
 	function update( $new_instance, $old_instance ) {
@@ -672,7 +683,6 @@ class WP_Widget_Recent_Comments extends WP_Widget {
 
 		<p><label for="<?php echo $this->get_field_id('number'); ?>"><?php _e('Number of comments to show:'); ?></label>
 		<input id="<?php echo $this->get_field_id('number'); ?>" name="<?php echo $this->get_field_name('number'); ?>" type="text" value="<?php echo $number; ?>" size="3" /><br />
-		<small><?php _e('(at most 15)'); ?></small></p>
 <?php
 	}
 }

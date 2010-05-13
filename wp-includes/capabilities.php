@@ -782,8 +782,8 @@ class WP_User {
  *
  * This does not actually compare whether the user ID has the actual capability,
  * just what the capability or capabilities are. Meta capability list value can
- * be 'delete_user', 'edit_user', 'delete_post', 'delete_page', 'edit_post',
- * 'edit_page', 'read_post', or 'read_page'.
+ * be 'delete_user', 'edit_user', 'remove_user', 'promote_user', 'delete_post',
+ * 'delete_page', 'edit_post', 'edit_page', 'read_post', or 'read_page'.
  *
  * @since 2.0.0
  *
@@ -802,10 +802,20 @@ function map_meta_cap( $cap, $user_id ) {
 	case 'delete_user':
 		$caps[] = 'delete_users';
 		break;
+	case 'promote_user':
+		$caps[] = 'promote_users';
+		break;
 	case 'edit_user':
-		if ( !isset( $args[0] ) || $user_id != $args[0] ) {
-			$caps[] = 'edit_users';
-		}
+		// Allow user to edit itself
+		if ( isset( $args[0] ) && $user_id == $args[0] )
+			break;
+		// Fall through
+	case 'edit_users':
+		// If multisite these caps are allowed only for super admins.
+		if ( is_multisite() && !is_super_admin() )
+			$caps[] = 'do_not_allow';
+		else
+			$caps[] = 'edit_users'; // Explicit due to primitive fall through
 		break;
 	case 'delete_post':
 		$author_data = get_userdata( $user_id );
@@ -1008,6 +1018,12 @@ function map_meta_cap( $cap, $user_id ) {
 		}
 		// Fall through if not DISALLOW_FILE_MODS.
 	case 'unfiltered_html':
+		// Disallow unfiltered_html for all users, even admins and super admins.
+		if ( defined('DISALLOW_UNFILTERED_HTML') && DISALLOW_UNFILTERED_HTML ) {
+			$caps[] = 'do_not_allow';
+			break;
+		}
+		// Fall through if not DISALLOW_UNFILTERED_HTML
 	case 'delete_user':
 	case 'delete_users':
 		// If multisite these caps are allowed only for super admins.
@@ -1161,6 +1177,24 @@ function remove_role( $role ) {
 }
 
 /**
+ * Retrieve a list of super admins.
+ *
+ * @since 3.0.0
+ *
+ * @uses $super_admins Super admins global variable, if set.
+ *
+ * @return array List of super admin logins
+ */
+function get_super_admins() {
+	global $super_admins;
+
+	if ( isset($super_admins) )
+		return $super_admins;
+	else
+		return get_site_option( 'site_admins', array('admin') );
+}
+
+/**
  * Determine if user is a site admin.
  *
  * @since 3.0.0
@@ -1180,8 +1214,8 @@ function is_super_admin( $user_id = false ) {
 	$user = new WP_User($user_id);
 
 	if ( is_multisite() ) {
-		$site_admins = get_site_option( 'site_admins', array('admin') );
-		if ( is_array( $site_admins ) && in_array( $user->user_login, $site_admins ) )
+		$super_admins = get_super_admins();
+		if ( is_array( $super_admins ) && in_array( $user->user_login, $super_admins ) )
 			return true;
 	} else {
 		if ( $user->has_cap('delete_users') )

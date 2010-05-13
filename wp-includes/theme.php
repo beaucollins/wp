@@ -7,6 +7,17 @@
  */
 
 /**
+ * Whether a child theme is in use.
+ *
+ * @since 3.0.0
+ *
+ * @return bool true if a child theme is in use, false otherwise.
+ **/
+function is_child_theme() {
+	return ( TEMPLATEPATH !== STYLESHEETPATH );
+}
+
+/**
  * Retrieve name of the current stylesheet.
  *
  * The theme name that the administrator has currently set the front end theme
@@ -845,6 +856,8 @@ function get_date_template() {
 /**
  * Retrieve path of home template in current or parent template.
  *
+ * This is the template used for the page containing the blog posts
+ *
  * Attempts to locate 'home.php' first before falling back to 'index.php'.
  *
  * @since 1.5.0
@@ -855,6 +868,22 @@ function get_date_template() {
 function get_home_template() {
 	$template = locate_template(array('home.php', 'index.php'));
 	return apply_filters('home_template', $template);
+}
+
+/**
+ * Retrieve path of front-page template in current or parent template.
+ *
+ * Looks for 'front-page.php'.
+ *
+ * @since 3.0.0
+ * @uses apply_filters() Calls 'front_page_template' on file path of template.
+ *
+ * @return string
+ */
+function get_front_page_template() {
+	global $wp_query;
+
+	return apply_filters( 'front_page_template', locate_template( array('front-page.php') ) );
 }
 
 /**
@@ -965,9 +994,7 @@ function get_attachment_template() {
  * Retrieve path of comment popup template in current or parent template.
  *
  * Checks for comment popup template in current template, if it exists or in the
- * parent template. If it doesn't exist, then it retrieves the comment-popup.php
- * file from the WP_FALLBACK_THEME theme. The WP_FALLBACK_THEME theme must then exist for it to
- * work.
+ * parent template.
  *
  * @since 1.5.0
  * @uses apply_filters() Calls 'comments_popup_template' filter on path.
@@ -976,8 +1003,10 @@ function get_attachment_template() {
  */
 function get_comments_popup_template() {
 	$template = locate_template(array("comments-popup.php"));
+
+	// Backward compat code will be removed in a future release
 	if ('' == $template)
-		$template = get_theme_root() . '/' . WP_FALLBACK_THEME . '/comments-popup.php';
+		$template = WPINC . '/theme-compat/comments-popup.php';
 
 	return apply_filters('comments_popup_template', $template);
 }
@@ -1001,6 +1030,8 @@ function locate_template($template_names, $load = false, $require_once = true ) 
 
 	$located = '';
 	foreach ( $template_names as $template_name ) {
+		if ( !$template_name )
+			continue;
 		if ( file_exists(STYLESHEETPATH . '/' . $template_name)) {
 			$located = STYLESHEETPATH . '/' . $template_name;
 			break;
@@ -1176,13 +1207,13 @@ function switch_theme($template, $stylesheet) {
 /**
  * Checks that current theme files 'index.php' and 'style.css' exists.
  *
- * Does not check the 'default' theme. The 'default' theme should always exist
- * or should have another theme renamed to that template name and directory
- * path. Will switch theme to default if current theme does not validate.
+ * Does not check the default theme, which is the fallback and should always exist.
+ * Will switch theme to the fallback theme if current theme does not validate.
  * You can use the 'validate_current_theme' filter to return FALSE to
  * disable this functionality.
  *
  * @since 1.5.0
+ * @see WP_DEFAULT_THEME
  *
  * @return bool
  */
@@ -1191,13 +1222,13 @@ function validate_current_theme() {
 	if ( defined('WP_INSTALLING') || !apply_filters( 'validate_current_theme', true ) )
 		return true;
 
-	if ( get_template() != WP_FALLBACK_THEME && !file_exists(get_template_directory() . '/index.php') ) {
-		switch_theme( WP_FALLBACK_THEME, WP_FALLBACK_THEME );
+	if ( get_template() != WP_DEFAULT_THEME && !file_exists(get_template_directory() . '/index.php') ) {
+		switch_theme( WP_DEFAULT_THEME, WP_DEFAULT_THEME );
 		return false;
 	}
 
-	if ( get_stylesheet() != WP_FALLBACK_THEME && !file_exists(get_template_directory() . '/style.css') ) {
-		switch_theme( WP_FALLBACK_THEME, WP_FALLBACK_THEME );
+	if ( get_stylesheet() != WP_DEFAULT_THEME && !file_exists(get_template_directory() . '/style.css') ) {
+		switch_theme( WP_DEFAULT_THEME, WP_DEFAULT_THEME );
 		return false;
 	}
 
@@ -1560,6 +1591,11 @@ function add_editor_style( $stylesheet = 'editor-style.css' ) {
 	global $editor_styles;
 	$editor_styles = (array) $editor_styles;
 	$stylesheet    = (array) $stylesheet;
+	if ( is_rtl() ) {
+		$rtl_stylesheet = str_replace('.css', '-rtl.css', $stylesheet[0]);
+		$stylesheet[] = $rtl_stylesheet;
+	}
+
 	$editor_styles = array_merge( $editor_styles, $stylesheet );
 }
 

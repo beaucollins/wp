@@ -15,114 +15,126 @@
  * Creates the initial post types when 'init' action is fired.
  */
 function create_initial_post_types() {
-	register_post_type( 'post', array(	'label' => __('Posts'),
-										'singular_label' => __('Post'),
-										'public' => true,
-										'show_ui' => false,
-										'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
-										'_edit_link' => 'post.php?post=%d', /* internal use only. don't use this when registering your own post type. */
-										'capability_type' => 'post',
-										'hierarchical' => false,
-										'rewrite' => false,
-										'query_var' => false,
-										'supports' => array('title', 'editor', 'author', 'thumbnail', 'excerpt', 'trackbacks', 'custom-fields', 'comments', 'revisions')
-									) );
+	register_post_type( 'post', array(
+		'label' => __( 'Posts' ),
+		'singular_label' => __( 'Post' ),
+		'public'  => true,
+		'show_ui' => false,
+		'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+		'_edit_link' => 'post.php?post=%d', /* internal use only. don't use this when registering your own post type. */
+		'capability_type' => 'post',
+		'hierarchical' => false,
+		'rewrite' => false,
+		'query_var' => false,
+		'supports' => array( 'title', 'editor', 'author', 'thumbnail', 'excerpt', 'trackbacks', 'custom-fields', 'comments', 'revisions' ),
+	) );
 
-	register_post_type( 'page', array(	'label' => __('Pages'),
-										'singular_label' => __('Page'),
-										'public' => true,
-										'show_ui' => false,
-										'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
-										'_edit_link' => 'post.php?post=%d', /* internal use only. don't use this when registering your own post type. */
-										'capability_type' => 'page',
-										'hierarchical' => true,
-										'rewrite' => false,
-										'query_var' => false,
-										'supports' => array('title', 'editor', 'author', 'thumbnail', 'page-attributes', 'custom-fields', 'comments', 'revisions')
-									) );
+	register_post_type( 'page', array(
+		'label' => __( 'Pages' ),
+		'singular_label' => __( 'Page' ),
+		'public' => true,
+		'show_ui' => false,
+		'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+		'_edit_link' => 'post.php?post=%d', /* internal use only. don't use this when registering your own post type. */
+		'capability_type' => 'page',
+		'hierarchical' => true,
+		'rewrite' => false,
+		'query_var' => false,
+		'supports' => array( 'title', 'editor', 'author', 'thumbnail', 'page-attributes', 'custom-fields', 'comments', 'revisions' ),
+	) );
 
-	register_post_type( 'attachment', array('label' => __('Media'),
-											'public' => true,
-											'show_ui' => false,
-											'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
-											'_edit_link' => 'media.php?attachment_id=%d', /* internal use only. don't use this when registering your own post type. */
-											'capability_type' => 'post',
-											'hierarchical' => false,
-											'rewrite' => false,
-											'query_var' => false,
-										) );
+	register_post_type( 'attachment', array(
+		'label' => __( 'Media' ),
+		'public' => true,
+		'show_ui' => false,
+		'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+		'_edit_link' => 'media.php?attachment_id=%d', /* internal use only. don't use this when registering your own post type. */
+		'capability_type' => 'post',
+		'hierarchical' => false,
+		'rewrite' => false,
+		'query_var' => false,
+		'can_export' => false,
+	) );
 
-	register_post_type( 'revision', array(	'label' => __('Revisions'),
-											'singular_label' => __('Revision'),
-											'public' => false,
-											'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
-											'_edit_link' => 'revision.php?revision=%d', /* internal use only. don't use this when registering your own post type. */
-											'capability_type' => 'post',
-											'hierarchical' => false,
-											'rewrite' => false,
-											'query_var' => false,
-										) );
+	register_post_type( 'revision', array(
+		'label' => __( 'Revisions' ),
+		'singular_label' => __( 'Revision' ),
+		'public' => false,
+		'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+		'_edit_link' => 'revision.php?revision=%d', /* internal use only. don't use this when registering your own post type. */
+		'capability_type' => 'post',
+		'hierarchical' => false,
+		'rewrite' => false,
+		'query_var' => false,
+	) );
 
-	register_post_type( 'nav_menu_item', array(	'label' => __('Navigation Menu Items'),
-												'singular_label' => __('Navigation Menu Item'),
-												'public' => false,
-												'show_ui' => false,
-												'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
-												'capability_type' => 'post',
-												'hierarchical' => false,
-												'rewrite' => false,
-												'query_var' => false,
-											) );
+	register_post_type( 'nav_menu_item', array(
+		'label' => __( 'Navigation Menu Items' ),
+		'singular_label' => __( 'Navigation Menu Item' ),
+		'public' => false,
+		'show_ui' => false,
+		'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
+		'capability_type' => 'post',
+		'hierarchical' => false,
+		'rewrite' => false,
+		'query_var' => false,
+	) );
 
-	register_post_status( 'publish', array(	'label' => _x('Published', 'post'),
-											'public' => true,
-											'_builtin' => true, /* internal use only. */
-											'label_count' => _n_noop('Published <span class="count">(%s)</span>', 'Published <span class="count">(%s)</span>')
-										) );
+	register_post_status( 'publish', array(
+		'label'       => _x( 'Published', 'post' ),
+		'public'      => true,
+		'_builtin'    => true, /* internal use only. */
+		'label_count' => _n_noop( 'Published <span class="count">(%s)</span>', 'Published <span class="count">(%s)</span>' ),
+	) );
 
-	register_post_status( 'future', array(	'label' => _x('Scheduled', 'post'),
-											'protected' => true,
-											'_builtin' => true, /* internal use only. */
-											'label_count' => _n_noop('Scheduled <span class="count">(%s)</span>', 'Scheduled <span class="count">(%s)</span>')
-										) );
+	register_post_status( 'future', array(
+		'label'       => _x( 'Scheduled', 'post' ),
+		'protected'   => true,
+		'_builtin'    => true, /* internal use only. */
+		'label_count' => _n_noop('Scheduled <span class="count">(%s)</span>', 'Scheduled <span class="count">(%s)</span>' ),
+	) );
 
-	register_post_status( 'draft', array(	'label' => _x('Draft', 'post'),
-											'protected' => true,
-											'_builtin' => true, /* internal use only. */
-											'label_count' => _n_noop('Draft <span class="count">(%s)</span>', 'Drafts <span class="count">(%s)</span>')
-										) );
+	register_post_status( 'draft', array(
+		'label'       => _x( 'Draft', 'post' ),
+		'protected'   => true,
+		'_builtin'    => true, /* internal use only. */
+		'label_count' => _n_noop( 'Draft <span class="count">(%s)</span>', 'Drafts <span class="count">(%s)</span>' ),
+	) );
 
-	register_post_status( 'pending', array(	'label' => _x('Pending', 'post'),
-											'protected' => true,
-											'_builtin' => true, /* internal use only. */
-											'label_count' => _n_noop('Pending <span class="count">(%s)</span>', 'Pending <span class="count">(%s)</span>')
-										) );
+	register_post_status( 'pending', array(
+		'label'       => _x( 'Pending', 'post' ),
+		'protected'   => true,
+		'_builtin'    => true, /* internal use only. */
+		'label_count' => _n_noop( 'Pending <span class="count">(%s)</span>', 'Pending <span class="count">(%s)</span>' ),
+	) );
 
-	register_post_status( 'private', array(	'label' => _x('Private', 'post'),
-											'private' => true,
-											'_builtin' => true, /* internal use only. */
-											'label_count' => _n_noop('Private <span class="count">(%s)</span>', 'Private <span class="count">(%s)</span>')
-										) );
+	register_post_status( 'private', array(
+		'label'       => _x( 'Private', 'post' ),
+		'private'     => true,
+		'_builtin'    => true, /* internal use only. */
+		'label_count' => _n_noop( 'Private <span class="count">(%s)</span>', 'Private <span class="count">(%s)</span>' ),
+	) );
 
-	register_post_status( 'trash', array(	'label' => _x('Trash', 'post'),
-											'internal' => true,
-											'show_in_admin_status_list' => true,
-											'_builtin' => true, /* internal use only. */
-											'label_count' => _n_noop('Trash <span class="count">(%s)</span>', 'Trash <span class="count">(%s)</span>')
-										) );
+	register_post_status( 'trash', array(
+		'label'       => _x( 'Trash', 'post' ),
+		'internal'    => true,
+		'_builtin'    => true, /* internal use only. */
+		'label_count' => _n_noop( 'Trash <span class="count">(%s)</span>', 'Trash <span class="count">(%s)</span>' ),
+		'show_in_admin_status_list' => true,
+	) );
 
-	register_post_status( 'auto-draft', array(	'label' => _x('Auto-Draft', 'post'),
-											'internal' => true,
-											'_builtin' => true, /* internal use only. */
-											'label_count' => _n_noop('Auto-Draft <span class="count">(%s)</span>', 'Auto-Drafts <span class="count">(%s)</span>')
-										) );
+	register_post_status( 'auto-draft', array(
+		'label'    => 'auto-draft',
+		'internal' => true,
+		'_builtin' => true, /* internal use only. */
+	) );
 
-	register_post_status( 'inherit', array(	'label' => _x('Inherit', 'post'),
-											'internal' => true,
-											'exclude_from_search' => false,
-											'_builtin' => true, /* internal use only. */
-											'label_count' => _n_noop('Inherit <span class="count">(%s)</span>', 'Inherit <span class="count">(%s)</span>')
-										) );
+	register_post_status( 'inherit', array(
+		'label'    => 'inherit',
+		'internal' => true,
+		'_builtin' => true, /* internal use only. */
+		'exclude_from_search' => false,
+	) );
 }
 add_action( 'init', 'create_initial_post_types', 0 ); // highest priority
 
@@ -593,7 +605,7 @@ function register_post_status($post_status, $args = array()) {
 		$args->label = $post_status;
 
 	if ( false === $args->label_count )
-		$args->label_count = $args->label;
+		$args->label_count = array( $args->label, $args->label );
 
 	$wp_post_statuses[$post_status] = $args;
 
@@ -634,7 +646,7 @@ function get_post_status_object( $post_status ) {
  *
  * @param array|string $args An array of key => value arguments to match against the post status objects.
  * @param string $output The type of output to return, either post status 'names' or 'objects'. 'names' is the default.
- * @param string $operator The logical operation to perform. 'or' means only one element 
+ * @param string $operator The logical operation to perform. 'or' means only one element
  *  from the array needs to match; 'and' means all elements must match. The default is 'and'.
  * @return array A list of post type names or objects
  */
@@ -654,33 +666,28 @@ function get_post_stati( $args = array(), $output = 'names', $operator = 'and' )
  * @since 3.0.0
  * @see get_post_type_object
  *
- * @param string|int|object $post Post type name, post id, or a post object.
- * @return bool true if post type is hierarchical, else false.
+ * @param string $post Post type name
+ * @return bool Whether post type is hierarchical.
  */
-function is_post_type_hierarchical( $post = false ) {
-	if ( is_string($post) && $is_post_type = get_post_type_object($post) )
-		return $is_post_type->hierarchical;
+function is_post_type_hierarchical( $post_type ) {
+	if ( ! is_post_type( $post_type ) )
+		return false;
 
-	$ptype = get_post( $post );
-	if ( $ptype && $is_post_type = get_post_type_object($ptype->post_type) )
-		return $is_post_type->hierarchical;
-
-	return false;
+	$post_type = get_post_type_object( $post_type );
+	return $post_type->hierarchical;
 }
 
 /**
- * Checks if a post type is registered, can also check if the current or specified post is of a post type.
+ * Checks if a post type is registered.
  *
  * @since 3.0.0
  * @uses get_post_type()
  *
- * @param string|array $types Type or types to check. Defaults to all post types.
- * @param int $id Post ID. Defaults to current ID.
- * @return bool
+ * @param string Post type name
+ * @return bool Whether post type is registered.
  */
-function is_post_type( $types = false, $id = false ) {
-	$types = ( $types === false ) ? get_post_types() : (array) $types;
-	return in_array( get_post_type( $id ), $types );
+function is_post_type( $post_type ) {
+	return (bool) get_post_type_object( $post_type );
 }
 
 /**
@@ -740,7 +747,7 @@ function get_post_type_object( $post_type ) {
  *
  * @param array|string $args An array of key => value arguments to match against the post type objects.
  * @param string $output The type of output to return, either post type 'names' or 'objects'. 'names' is the default.
- * @param string $operator The logical operation to perform. 'or' means only one element 
+ * @param string $operator The logical operation to perform. 'or' means only one element
  *  from the array needs to match; 'and' means all elements must match. The default is 'and'.
  * @return array A list of post type names or objects
  */
@@ -799,7 +806,7 @@ function register_post_type($post_type, $args = array()) {
 		$wp_post_types = array();
 
 	// Args prefixed with an underscore are reserved for internal use.
-	$defaults = array('label' => false, 'singular_label' => false, 'description' => '', 'publicly_queryable' => null, 'exclude_from_search' => null, '_builtin' => false, '_edit_link' => 'post.php?post=%d', 'capability_type' => 'post', 'hierarchical' => false, 'public' => false, 'rewrite' => true, 'query_var' => true, 'supports' => array(), 'register_meta_box_cb' => null, 'taxonomies' => array(), 'show_ui' => null, 'menu_position' => null, 'menu_icon' => null, 'permalink_epmask' => EP_NONE );
+	$defaults = array('label' => false, 'singular_label' => false, 'description' => '', 'publicly_queryable' => null, 'exclude_from_search' => null, '_builtin' => false, '_edit_link' => 'post.php?post=%d', 'capability_type' => 'post', 'hierarchical' => false, 'public' => false, 'rewrite' => true, 'query_var' => true, 'supports' => array(), 'register_meta_box_cb' => null, 'taxonomies' => array(), 'show_ui' => null, 'menu_position' => null, 'menu_icon' => null, 'permalink_epmask' => EP_PERMALINK, 'can_export' => true );
 	$args = wp_parse_args($args, $defaults);
 	$args = (object) $args;
 
@@ -1561,9 +1568,10 @@ function wp_match_mime_types($wildcard_mime_types, $real_mime_types) {
  * @since 2.5.0
  *
  * @param string|array $mime_types List of mime types or comma separated string of mime types.
+ * @param string $table_alias Optional. Specify a table alias, if needed. 
  * @return string The SQL AND clause for mime searching.
  */
-function wp_post_mime_type_where($post_mime_types) {
+function wp_post_mime_type_where($post_mime_types, $table_alias = '') {
 	$where = '';
 	$wildcards = array('', '%', '%/%');
 	if ( is_string($post_mime_types) )
@@ -1591,9 +1599,9 @@ function wp_post_mime_type_where($post_mime_types) {
 			return '';
 
 		if ( false !== strpos($mime_pattern, '%') )
-			$wheres[] = "post_mime_type LIKE '$mime_pattern'";
+			$wheres[] = empty($table_alias) ? "post_mime_type LIKE '$mime_pattern'" : "$table_alias.post_mime_type LIKE '$mime_pattern'";
 		else
-			$wheres[] = "post_mime_type = '$mime_pattern'";
+			$wheres[] = empty($table_alias) ? "post_mime_type = '$mime_pattern'" : "$table_alias.post_mime_type = '$mime_pattern'";
 	}
 	if ( !empty($wheres) )
 		$where = ' AND (' . join(' OR ', $wheres) . ') ';
@@ -2073,6 +2081,9 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 	if ( empty($post_type) )
 		$post_type = 'post';
 
+	if ( !empty($post_category) )
+		$post_category = array_filter($post_category); // Filter out empty terms
+
 	// Make sure we set a valid category.
 	if ( empty($post_category) || 0 == count($post_category) || !is_array($post_category) ) {
 		// 'post' requires at least one category.
@@ -2144,7 +2155,11 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 		if ( $update )
 			$comment_status = 'closed';
 		else
-			$comment_status = get_option('default_comment_status');
+			if ( 'page' == $post_type ) {
+				$comment_status = get_option( 'default_comment_status_page' );
+			} else {
+				$comment_status = get_option( 'default_comment_status' );
+			}
 	}
 	if ( empty($ping_status) )
 		$ping_status = get_option('default_ping_status');
@@ -2169,7 +2184,7 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 		} elseif ( !empty($post_parent) ) {
 			$parent_post = get_post($post_parent);
 			// Check for circular dependency
-			if ( $parent_post->post_parent == $post_ID )
+			if ( isset( $parent_post->post_parent ) && $parent_post->post_parent == $post_ID )
 				$post_parent = 0;
 		}
 	}
@@ -2190,7 +2205,7 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 	$data = stripslashes_deep( $data );
 	$where = array( 'ID' => $post_ID );
 
-	if ($update) {
+	if ( $update ) {
 		do_action( 'pre_post_update', $post_ID );
 		if ( false === $wpdb->update( $wpdb->posts, $data, $where ) ) {
 			if ( $wp_error )
@@ -2229,10 +2244,13 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 	// old-style tags_input
 	if ( isset( $tags_input ) )
 		wp_set_post_tags( $post_ID, $tags_input );
-	// new-style support for all tag-like taxonomies
+
+	// new-style support for all custom taxonomies
 	if ( !empty($tax_input) ) {
 		foreach ( $tax_input as $taxonomy => $tags ) {
 			$taxonomy_obj = get_taxonomy($taxonomy);
+			if ( is_array($tags) ) // array = hierarchical, string = non-hierarchical.
+				$tags = array_filter($tags);
 			if ( current_user_can($taxonomy_obj->assign_cap) )
 				wp_set_post_terms( $post_ID, $tags, $taxonomy );
 		}
@@ -2265,7 +2283,7 @@ function wp_insert_post($postarr = array(), $wp_error = false) {
 
 	wp_transition_post_status($data['post_status'], $previous_status, $post);
 
-	if ( $update)
+	if ( $update )
 		do_action('edit_post', $post_ID, $post);
 
 	do_action('save_post', $post_ID, $post);
@@ -2549,12 +2567,12 @@ function wp_set_post_categories($post_ID = 0, $post_categories = array()) {
 	$post_ID = (int) $post_ID;
 	$post_type = get_post_type( $post_ID );
 	// If $post_categories isn't already an array, make it one:
-	if ( !is_array($post_categories) || 0 == count($post_categories) || empty($post_categories) ) {
+	if ( !is_array($post_categories) || empty($post_categories) ) {
 		if ( 'post' == $post_type )
 			$post_categories = array( get_option('default_category') );
 		else
 			$post_categories = array();
-	} else if ( 1 == count($post_categories) && '' == $post_categories[0] ) {
+	} else if ( 1 == count($post_categories) && '' == reset($post_categories) ) {
 		return true;
 	}
 
@@ -2786,8 +2804,8 @@ function get_page_by_path($page_path, $output = OBJECT, $post_type = 'page') {
 	$leaf_path  = sanitize_title(basename($page_paths));
 	$page_paths = explode('/', $page_paths);
 	$full_path = '';
-	foreach( (array) $page_paths as $pathdir)
-		$full_path .= ($pathdir!=''?'/':'') . sanitize_title($pathdir);
+	foreach ( (array) $page_paths as $pathdir )
+		$full_path .= ( $pathdir != '' ? '/' : '' ) . sanitize_title($pathdir);
 
 	$pages = $wpdb->get_results( $wpdb->prepare( "SELECT ID, post_name, post_parent FROM $wpdb->posts WHERE post_name = %s AND (post_type = %s OR post_type = 'attachment')", $leaf_path, $post_type ));
 
@@ -2910,11 +2928,12 @@ function _page_traverse_name( $page_id, &$children, &$result ){
  *
  * @since 1.5.0
  *
- * @param int $page_id Page ID.
+ * @param mixed $page Page object or page ID.
  * @return string Page URI.
  */
-function get_page_uri($page_id) {
-	$page = get_page($page_id);
+function get_page_uri($page) {
+	if ( ! is_object($page) )
+		$page = get_page($page);
 	$uri = $page->post_name;
 
 	// A page cannot be it's own parent.
@@ -3124,9 +3143,9 @@ function &get_pages($args = '') {
  * @return bool True on success, false on failure.
  */
 function is_local_attachment($url) {
-	if (strpos($url, get_bloginfo('url')) === false)
+	if (strpos($url, home_url()) === false)
 		return false;
-	if (strpos($url, get_bloginfo('url') . '/?attachment_id=') !== false)
+	if (strpos($url, home_url('/?attachment_id=')) !== false)
 		return true;
 	if ( $id = url_to_postid($url) ) {
 		$post = & get_post($id);
@@ -3669,7 +3688,7 @@ function wp_mime_type_icon( $mime = 0 ) {
  * @return int Same as $post_id
  */
 function wp_check_for_changed_slugs($post_id) {
-	if ( !isset($_POST['wp-old-slug']) || !strlen($_POST['wp-old-slug']) )
+	if ( empty($_POST['wp-old-slug']) )
 		return $post_id;
 
 	$post = &get_post($post_id);
@@ -3984,8 +4003,9 @@ function clean_page_cache($id) {
  * @uses update_postmeta_cache()
  *
  * @param array $posts Array of Post objects
+ * @param string $post_type The post type of the posts in $posts
  */
-function update_post_caches(&$posts) {
+function update_post_caches(&$posts, $post_type = 'post') {
 	// No point in doing all this work if we didn't match any posts.
 	if ( !$posts )
 		return;
@@ -3993,11 +4013,14 @@ function update_post_caches(&$posts) {
 	update_post_cache($posts);
 
 	$post_ids = array();
+	foreach ( $posts as $post )
+		$post_ids[] = $post->ID;
 
-	for ($i = 0; $i < count($posts); $i++)
-		$post_ids[] = $posts[$i]->ID;
+	if ( empty($post_type) )
+		$post_type = 'post';
 
-	update_object_term_cache($post_ids, 'post');
+	if ( !is_array($post_type) && 'any' != $post_type )
+		update_object_term_cache($post_ids, $post_type);
 
 	update_postmeta_cache($post_ids);
 }
@@ -4110,7 +4133,7 @@ function _transition_post_status($new_status, $old_status, $post) {
  */
 function _future_post_hook( $deprecated = '', $post ) {
 	wp_clear_scheduled_hook( 'publish_future_post', array( $post->ID ) );
-	wp_schedule_single_event( strtotime( $post->post_date_gmt. ' GMT' ), 'publish_future_post', array( $post->ID ) );
+	wp_schedule_single_event( strtotime( get_gmt_from_date( $post->post_date ) . ' GMT') , 'publish_future_post', array( $post->ID ) );
 }
 
 /**

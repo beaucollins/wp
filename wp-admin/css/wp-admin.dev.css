@@ -504,6 +504,7 @@ textarea.all-options, input.all-options {
 	line-height: 150%;
 	border: 0 none;
 	outline: none;
+	resize: vertical;
 	-moz-box-sizing: border-box;
 	-webkit-box-sizing: border-box;
 	-khtml-box-sizing: border-box;
@@ -802,11 +803,12 @@ td.media-icon img {
 	max-height: 60px;
 }
 
-#update-nag {
-	line-height: 29px;
+#update-nag, .update-nag {
+	line-height: 19px;
+	padding: 5px 0;
 	font-size: 12px;
 	text-align: center;
-	margin: 0 6px;
+	margin: 0 15px;
 	border-width: 1px;
 	border-style: solid;
 	border-top-width: 0;
@@ -1958,7 +1960,8 @@ input#link_url {
 	width: auto;
 }
 
-#post-body ul.category-tabs {
+#post-body ul.category-tabs,
+#post-body ul.add-menu-item-tabs {
 	float: left;
 	width: 120px;
 	text-align: right;
@@ -1967,11 +1970,13 @@ input#link_url {
 	padding: 0;
 }
 
-#post-body ul.category-tabs li {
+#post-body ul.category-tabs li,
+#post-body ul.add-menu-item-tabs li {
 	padding: 8px;
 }
 
-#post-body ul.category-tabs li.tabs {
+#post-body ul.category-tabs li.tabs,
+#post-body ul.add-menu-item-tabs li.tabs {
 	-moz-border-radius: 3px 0 0 3px;
 	-webkit-border-top-left-radius: 3px;
 	-webkit-border-bottom-left-radius: 3px;
@@ -1981,12 +1986,16 @@ input#link_url {
 	border-bottom-left-radius: 3px;
 }
 
-#post-body ul.category-tabs li.tabs a {
+#post-body ul.category-tabs li.tabs a,
+#post-body ul.add-menu-item-tabs li.tabs a {
 	font-weight: bold;
 	text-decoration: none;
 }
 
 .categorydiv div.tabs-panel,
+.customlinkdiv div.tabs-panel,
+.posttypediv div.tabs-panel,
+.taxonomydiv div.tabs-panel,
 #linkcategorydiv div.tabs-panel {
 	height: 200px;
 	overflow: auto;
@@ -1995,25 +2004,47 @@ input#link_url {
 	border-width: 1px;
 }
 
+.nav-menus-php .customlinkdiv div.tabs-panel,
+.nav-menus-php .posttypediv div.tabs-panel,
+.nav-menus-php .taxonomydiv div.tabs-panel {
+	height: auto;
+	max-height: 205px;
+}
+
+div.tabs-panel-active {
+	display:block;
+}
+
+div.tabs-panel-inactive {
+	display:none;
+}
+
 #post-body .categorydiv div.tabs-panel,
+.taxonomy div.tabs-panel,
 #post-body #linkcategorydiv div.tabs-panel {
 	margin: 0 5px 0 125px;
 }
 
-#side-sortables .category-tabs li {
+#side-sortables .category-tabs li,
+#side-sortables .add-menu-item-tabs li {
 	display: inline;
 	padding-right: 8px;
 }
 
-#side-sortables .category-tabs a {
+#side-sortables .category-tabs a,
+#side-sortables .add-menu-item-tabs a {
 	text-decoration: none;
 }
 
-#side-sortables .category-tabs {
+#side-sortables .category-tabs,
+#side-sortables .add-menu-item-tabs {
 	margin-bottom: 3px;
 }
 
 .categorydiv ul,
+.customlinkdiv ul,
+.posttypediv ul,
+.taxonomydiv ul,
 #linkcategorydiv ul {
 	list-style: none;
 	padding: 0;
@@ -2024,6 +2055,9 @@ input#link_url {
 #front-static-pages ul,
 .inline-editor ul.cat-checklist ul,
 .categorydiv ul.categorychecklist ul,
+.customlinkdiv ul.categorychecklist ul,
+.posttypediv ul.categorychecklist ul,
+.taxonomydiv ul.categorychecklist ul,
 #linkcategorydiv ul.categorychecklist ul {
 	margin-left: 18px;
 }
@@ -2039,27 +2073,34 @@ ul.categorychecklist li {
 	margin-bottom: 0px;
 }
 
-.categorydiv .tabs-panel {
+.categorydiv .tabs-panel,
+.customlinkdiv .tabs-panel,
+.posttypediv .tabs-panel,
+.taxonomydiv .tabs-panel {
 	border-width: 3px;
 	border-style: solid;
 }
 
-ul.category-tabs {
+ul.category-tabs,
+ul.add-menu-item-tabs {
 	margin-top: 12px;
 }
 
-ul.category-tabs li.tabs {
+ul.category-tabs li.tabs,
+ul.add-menu-item-tabs li.tabs {
 	border-style: solid solid none;
 	border-width: 1px 1px 0;
 }
 
-#post-body .category-tabs li.tabs {
+#post-body .category-tabs li.tabs,
+#post-body .add-menu-item-tabs li.tabs {
 	border-style: solid none solid solid;
 	border-width: 1px 0 1px 1px;
 	margin-right: -1px;
 }
 
-ul.category-tabs li {
+ul.category-tabs li,
+ul.add-menu-item-tabs li {
 	padding: 5px 8px;
 	-moz-border-radius: 3px 3px 0 0;
 	-webkit-border-top-left-radius: 3px;
@@ -2483,7 +2524,7 @@ fieldset {
 }
 
 #screen-meta-links {
-	margin: 0 9px 0 0;
+	margin: 0 18px 0 0;
 }
 
 #screen-meta .screen-reader-text {
@@ -3608,7 +3649,7 @@ span.imgedit-scale-warn {
 /* tag hints */
 .taghint {
 	color: #aaa;
-	margin: 14px 0 -17px 8px;
+	margin: 15px 0 -24px 12px;
 }
 
 #poststuff .tagsdiv .howto {
@@ -3678,15 +3719,19 @@ table#available-headers label img {
 
 /* Tab Interface */
 
-.menu-tabs {
-	border-width: 1px 1px 2px;
+.nav-tab {
 	border-style: solid;
 	border-color: #ccc #ccc #f9f9f9;
-	color: #464646;
-	padding: 4px 20px 6px;
+	border-width: 1px 1px 0;
+	color: #c1c1c1;
+	text-shadow: rgba(255,255,255,1) 0 1px 0;
+	font-size: 12px;
+	line-height: 16px;
+	display: inline-block;
+	padding: 4px 14px 6px;
 	text-decoration: none;
 	background-color: #fafafa;
-	margin: 0 6px 0 0;
+	margin: 0 6px -1px 0;
 	-moz-border-radius: 5px 5px 0 0;
 	-webkit-border-top-left-radius: 5px;
 	-webkit-border-top-right-radius: 5px;
@@ -3696,12 +3741,17 @@ table#available-headers label img {
 	border-top-right-radius: 5px;
 }
 
-.themes-php .wrap h2, .theme-install-php .wrap h2 {
-	border-bottom: 1px solid #ccc;
+.nav-tab-active {
+	border-width: 1px;
+	color: #464646;
 }
 
-.menu-tab-inactive {
-	border-width: 1px 1px 0;
-	background-color: #fafafa;
-	color: #c1c1c1;
+.themes-php .wrap h2, .theme-install-php .wrap h2 {
+	border-bottom: 1px solid #ccc;
+	padding-bottom: 0;
+}
+
+h2 .nav-tab {
+	padding: 4px 20px 6px;
+	font: italic normal normal 24px/35px Georgia, "Times New Roman", "Bitstream Charter", Times, serif;
 }

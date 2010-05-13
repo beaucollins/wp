@@ -348,9 +348,10 @@ function wp_set_wpdb_vars() {
  * @since 3.0.0
  */
 function wp_start_object_cache() {
+	global $_wp_using_ext_object_cache;
+
 	$first_init = false;
  	if ( ! function_exists( 'wp_cache_init' ) ) {
-		global $_wp_using_ext_object_cache;
 		if ( file_exists( WP_CONTENT_DIR . '/object-cache.php' ) ) {
 			require_once ( WP_CONTENT_DIR . '/object-cache.php' );
 			$_wp_using_ext_object_cache = true;
@@ -359,6 +360,11 @@ function wp_start_object_cache() {
 			$_wp_using_ext_object_cache = false;
 		}
 		$first_init = true;
+	} else if ( !$_wp_using_ext_object_cache && file_exists( WP_CONTENT_DIR . '/object-cache.php' ) ) {
+		// Sometimes advanced-cache.php can load object-cache.php before it is loaded here.
+		// This breaks the function_exists check above and can result in $_wp_using_ext_object_cache
+		// being set incorrectly.  Double check if an external cache exists.
+		$_wp_using_ext_object_cache = true;
 	}
 
 	// If cache supports reset, reset instead of init if already initialized.
@@ -386,7 +392,7 @@ function wp_start_object_cache() {
 function wp_not_installed() {
 	if ( is_multisite() ) {
 		if ( ! is_blog_installed() && ! defined( 'WP_INSTALLING' ) )
-			wp_die( __( 'The blog you have requested is not installed properly. Please contact the system administrator.' ) );
+			wp_die( __( 'The site you have requested is not installed properly. Please contact the system administrator.' ) );
 	} elseif ( ! is_blog_installed() && false === strpos( $_SERVER['PHP_SELF'], 'install.php' ) && !defined( 'WP_INSTALLING' ) ) {
 		if ( defined( 'WP_SITEURL' ) )
 			$link = WP_SITEURL . '/wp-admin/install.php';

@@ -52,10 +52,10 @@ function wptexturize($text) {
 			$cockney = array("'tain't","'twere","'twas","'tis","'twill","'til","'bout","'nuff","'round","'cause");
 			$cockneyreplace = array("&#8217;tain&#8217;t","&#8217;twere","&#8217;twas","&#8217;tis","&#8217;twill","&#8217;til","&#8217;bout","&#8217;nuff","&#8217;round","&#8217;cause");
 		}
-		
+
 		$static_characters = array_merge(array('---', ' -- ', '--', ' - ', 'xn&#8211;', '...', '``', '\'\'', ' (tm)'), $cockney);
 		$static_replacements = array_merge(array('&#8212;', ' &#8212; ', '&#8211;', ' &#8211; ', 'xn--', '&#8230;', $opening_quote, $closing_quote, ' &#8482;'), $cockneyreplace);
- 
+
 		$dynamic_characters = array('/\'(\d\d(?:&#8217;|\')?s)/', '/\'(\d+)/', '/(\s|\A|[([{<]|")\'/', '/(\d+)"/', '/(\d+)\'/', '/(\S)\'([^\'\s])/', '/(\s|\A|[([{<])"(?!\s)/', '/"(\s|\S|\Z)/', '/\'([\s.]|\Z)/', '/\b(\d+)x(\d+)\b/');
 		$dynamic_replacements = array('&#8217;$1','&#8217;$1', '$1&#8216;', '$1&#8243;', '$1&#8242;', '$1&#8217;$2', '$1' . $opening_quote . '$2', $closing_quote . '$1', '&#8217;$1', '$1&#215;$2');
 
@@ -735,19 +735,20 @@ function sanitize_file_name( $filename ) {
  */
 function sanitize_user( $username, $strict = false ) {
 	$raw_username = $username;
-	$username = wp_strip_all_tags($username);
+	$username = wp_strip_all_tags( $username );
+	$username = remove_accents( $username );
 	// Kill octets
-	$username = preg_replace('|%([a-fA-F0-9][a-fA-F0-9])|', '', $username);
-	$username = preg_replace('/&.+?;/', '', $username); // Kill entities
+	$username = preg_replace( '|%([a-fA-F0-9][a-fA-F0-9])|', '', $username );
+	$username = preg_replace( '/&.+?;/', '', $username ); // Kill entities
 
 	// If strict, reduce to ASCII for max portability.
 	if ( $strict )
-		$username = preg_replace('|[^a-z0-9 _.\-@]|i', '', $username);
+		$username = preg_replace( '|[^a-z0-9 _.\-@]|i', '', $username );
 
 	// Consolidate contiguous whitespace
-	$username = preg_replace('|\s+|', ' ', $username);
+	$username = preg_replace( '|\s+|', ' ', $username );
 
-	return apply_filters('sanitize_user', $username, $raw_username, $strict);
+	return apply_filters( 'sanitize_user', $username, $raw_username, $strict );
 }
 
 /**
@@ -1465,10 +1466,13 @@ function convert_smilies($text) {
  * @since 0.71
  *
  * @param string $email Email address to verify.
- * @param boolean $check_dns Whether to check the DNS for the domain using checkdnsrr().
+ * @param boolean $deprecated. Deprecated.
  * @return string|bool Either false or the valid email address.
  */
-function is_email( $email, $check_dns = false ) {
+function is_email( $email, $deprecated = false ) {
+	if ( ! empty( $deprecated ) )
+		_deprecated_argument( __FUNCTION__, '3.0' );
+
 	// Test for the minimum length the email can be
 	if ( strlen( $email ) < 3 ) {
 		return apply_filters( 'is_email', false, $email, 'email_too_short' );
@@ -1520,12 +1524,6 @@ function is_email( $email, $check_dns = false ) {
 		}
 	}
 
-	// DNS
-	// Check the domain has a valid MX and A resource record
-	if ( $check_dns && function_exists( 'checkdnsrr' ) && !( checkdnsrr( $domain . '.', 'MX' ) || checkdnsrr( $domain . '.', 'A' ) ) ) {
-		return apply_filters( 'is_email', false, $email, 'dns_no_rr' );
-	}
-
 	// Congratulations your email made it!
 	return apply_filters( 'is_email', $email, $email, null );
 }
@@ -1555,7 +1553,8 @@ function wp_iso_descrambler($string) {
  *
  * Requires and returns a date in the Y-m-d H:i:s format. Simply subtracts the
  * value of the 'gmt_offset' option. Return format can be overridden using the
- * $format parameter
+ * $format parameter. If PHP5 is supported, the function uses the DateTime and
+ * DateTimeZone objects to respect time zone differences in DST.
  *
  * @since 1.2.0
  *
@@ -1566,8 +1565,23 @@ function wp_iso_descrambler($string) {
  */
 function get_gmt_from_date($string, $format = 'Y-m-d H:i:s') {
 	preg_match('#([0-9]{1,4})-([0-9]{1,2})-([0-9]{1,2}) ([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})#', $string, $matches);
-	$string_time = gmmktime($matches[4], $matches[5], $matches[6], $matches[2], $matches[3], $matches[1]);
-	$string_gmt = gmdate($format, $string_time - get_option('gmt_offset') * 3600);
+	$tz = get_option('timezone_string');
+	if( class_exists('DateTime') && $tz ) {
+		//PHP5
+		date_default_timezone_set( $tz );
+		$datetime = new DateTime( $string );
+		$datetime->setTimezone( new DateTimeZone('UTC') );
+		$offset = $datetime->getOffset();
+		$datetime->modify( '+' . $offset / 3600 . ' hours');
+		$string_gmt = gmdate($format, $datetime->format('U'));
+
+		date_default_timezone_set('UTC');
+	}
+	else {
+		//PHP4
+		$string_time = gmmktime($matches[4], $matches[5], $matches[6], $matches[2], $matches[3], $matches[1]);
+		$string_gmt = gmdate($format, $string_time - get_option('gmt_offset') * 3600);
+	}
 	return $string_gmt;
 }
 
@@ -2196,7 +2210,8 @@ function esc_sql( $sql ) {
 function esc_url( $url, $protocols = null, $_context = 'display' ) {
 	$original_url = $url;
 
-	if ('' == $url) return $url;
+	if ( '' == $url )
+		return $url;
 	$url = preg_replace('|[^a-z0-9-~+_.?#=!&;,/:%@$\|*\'()\\x80-\\xff]|i', '', $url);
 	$strip = array('%0d', '%0a', '%0D', '%0A');
 	$url = _deep_replace($strip, $url);
@@ -2216,7 +2231,7 @@ function esc_url( $url, $protocols = null, $_context = 'display' ) {
 	}
 
 	if ( !is_array($protocols) )
-		$protocols = array('http', 'https', 'ftp', 'ftps', 'mailto', 'news', 'irc', 'gopher', 'nntp', 'feed', 'telnet');
+		$protocols = array ('http', 'https', 'ftp', 'ftps', 'mailto', 'news', 'irc', 'gopher', 'nntp', 'feed', 'telnet', 'mms', 'rtsp', 'svn');
 	if ( wp_kses_bad_protocol( $url, $protocols ) != $url )
 		return '';
 
@@ -2356,11 +2371,14 @@ function wp_make_link_relative( $link ) {
  */
 function sanitize_option($option, $value) {
 
-	switch ($option) {
+	switch ( $option ) {
 		case 'admin_email':
 			$value = sanitize_email($value);
-			if ( !$value && function_exists('add_settings_error') )
-				add_settings_error('admin_email', 'invalid_admin_email', __('The email address submitted was not in the right format. Please enter a valid email address.'));
+			if ( !is_email($value) ) {
+				$value = get_option( $option ); // Resets option to stored value in the case of failed sanitization
+				if ( function_exists('add_settings_error') )
+					add_settings_error('admin_email', 'invalid_admin_email', __('The email address entered did not appear to be a valid email address. Please enter a valid email address.'));
+			}
 			break;
 
 		case 'thumbnail_size_w':
@@ -2394,8 +2412,10 @@ function sanitize_option($option, $value) {
 		case 'posts_per_page':
 		case 'posts_per_rss':
 			$value = (int) $value;
-			if ( empty($value) ) $value = 1;
-			if ( $value < -1 ) $value = abs($value);
+			if ( empty($value) )
+				$value = 1;
+			if ( $value < -1 )
+				$value = abs($value);
 			break;
 
 		case 'default_ping_status':
@@ -2435,9 +2455,25 @@ function sanitize_option($option, $value) {
 			break;
 
 		case 'siteurl':
-		case 'home':
-			$value = esc_url_raw($value);
+			if ( (bool)preg_match( '#http(s?)://(.+)#i', $value) ) {
+				$value = esc_url_raw($value);
+			} else {
+				$value = get_option( $option ); // Resets option to stored value in the case of failed sanitization
+				if ( function_exists('add_settings_error') )
+					add_settings_error('siteurl', 'invalid_siteurl', __('The WordPress address you entered did not appear to be a valid URL. Please enter a valid URL.'));
+			}
 			break;
+
+		case 'home':
+			if ( (bool)preg_match( '#http(s?)://(.+)#i', $value) ) {
+				$value = esc_url_raw($value);
+			} else {
+				$value = get_option( $option ); // Resets option to stored value in the case of failed sanitization
+				if ( function_exists('add_settings_error') )
+					add_settings_error('home', 'invalid_home', __('The Site address you entered did not appear to be a valid URL. Please enter a valid URL.'));
+			}
+			break;
+
 		default :
 			$value = apply_filters("sanitize_option_{$option}", $value, $option);
 			break;
