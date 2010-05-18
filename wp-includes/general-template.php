@@ -228,13 +228,17 @@ function wp_logout_url($redirect = '') {
  * @uses apply_filters() calls 'login_url' hook on final login url
  *
  * @param string $redirect Path to redirect to on login.
+ * @param bool $force_reauth Whether to force reauthorization, even if a cookie is present. Default is false.
+ * @return string A log in url
  */
-function wp_login_url($redirect = '') {
+function wp_login_url($redirect = '', $force_reauth = false) {
 	$login_url = site_url('wp-login.php', 'login');
 
-	if ( !empty($redirect) ) {
+	if ( !empty($redirect) )
 		$login_url = add_query_arg('redirect_to', urlencode($redirect), $login_url);
-	}
+
+	if ( $force_reauth )
+		$login_url = add_query_arg('reauth', '1', $login_url);
 
 	return apply_filters('login_url', $login_url, $redirect);
 }
@@ -459,7 +463,11 @@ function get_bloginfo( $show = '', $filter = 'raw' ) {
 			break;
 		case 'text_direction':
 			//_deprecated_argument( __FUNCTION__, '2.2', sprintf( __('The <code>%s</code> option is deprecated for the family of <code>bloginfo()</code> functions.' ), $show ) . ' ' . sprintf( __( 'Use the <code>%s</code> function instead.' ), 'is_rtl()'  ) );
-			return function_exists( 'is_rtl' ) ? is_rtl() : 'ltr';
+			if ( function_exists( 'is_rtl' ) ) {
+				$output = is_rtl() ? 'rtl' : 'ltr';
+			} else {
+				$output = 'ltr';
+			}
 			break;
 		case 'name':
 		default:
@@ -584,10 +592,9 @@ function wp_title($sep = '&raquo;', $display = true, $seplocation = '') {
 	if ( is_tax() ) {
 		$taxonomy = get_query_var( 'taxonomy' );
 		$tax = get_taxonomy( $taxonomy );
-		$tax = $tax->label;
 		$term = $wp_query->get_queried_object();
 		$term = $term->name;
-		$title = $tax . $t_sep . $term;
+		$title = $tax->labels->name . $t_sep . $term;
 	}
 
 	//If it's a search

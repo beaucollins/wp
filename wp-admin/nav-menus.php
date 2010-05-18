@@ -16,8 +16,8 @@ require_once( 'admin.php' );
 require_once( ABSPATH . 'wp-admin/includes/nav-menu.php' );
 
 // Permissions Check
-if ( ! current_user_can('switch_themes') )
-	wp_die( __( 'Cheatin&#8217; uh?' ));
+if ( ! current_user_can('edit_theme_options') )
+	wp_die( __( 'Cheatin&#8217; uh?' ) );
 
 // Nav Menu CSS
 wp_admin_css( 'nav-menu' );
@@ -27,7 +27,6 @@ wp_enqueue_script( 'jquery' );
 wp_enqueue_script( 'jquery-ui-draggable' );
 wp_enqueue_script( 'jquery-ui-droppable' );
 wp_enqueue_script( 'jquery-ui-sortable' );
-wp_enqueue_script( 'jquery-autocomplete' );
 
 // Nav Menu functions
 wp_enqueue_script( 'nav-menu' );
@@ -51,12 +50,11 @@ $action = isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : 'edit';
 
 switch ( $action ) {
 	case 'add-menu-item':
-		if ( current_user_can( 'switch_themes' ) ) {
-			check_admin_referer( 'add-menu_item', 'menu-settings-column-nonce' );
-			if ( isset( $_REQUEST['menu-item'] ) ) {
-				wp_save_nav_menu_item( $nav_menu_selected_id, $_REQUEST['menu-item'] );
-			}
-		}
+		check_admin_referer( 'add-menu_item', 'menu-settings-column-nonce' );
+		if ( isset( $_REQUEST['nav-menu-locations'] ) )
+			set_theme_mod( 'nav_menu_locations', $_REQUEST['menu-locations'] );
+		elseif ( isset( $_REQUEST['menu-item'] ) )
+			wp_save_nav_menu_item( $nav_menu_selected_id, $_REQUEST['menu-item'] );
 		break;
 	case 'move-down-menu-item' :
 		// moving down a menu item is the same as moving up the next in order
@@ -250,6 +248,7 @@ switch ( $action ) {
 			} else {
 				$messages[] = '<div id="message" class="updated"><p>' . __('The menu has been successfully deleted.') . '</p></div>';
 				$nav_menu_selected_id = 0; // Reset the selected menu
+				unset($_REQUEST['menu']);
 			}
 			unset( $delete_nav_menu );
 		}
@@ -269,6 +268,9 @@ switch ( $action ) {
 					if ( is_wp_error( $_nav_menu_selected_id ) ) {
 						$messages[] = '<div id="message" class="error"><p>' . $_nav_menu_selected_id->get_error_message() . '</p></div>';
 					} else {
+						if ( ( $_menu_locations = get_registered_nav_menus() ) && 1 == count( wp_get_nav_menus() ) )
+							set_theme_mod( 'nav_menu_locations', array( key( $_menu_locations ) => $_nav_menu_selected_id ) );
+						unset( $_menu_locations );
 						$_menu_object = wp_get_nav_menu_object( $_nav_menu_selected_id );
 						$nav_menu_selected_id = $_nav_menu_selected_id;
 						$nav_menu_selected_title = $_menu_object->name;
@@ -299,7 +301,8 @@ switch ( $action ) {
 
 			if ( ! is_wp_error( $_menu_object ) ) {
 				$menu_items = wp_get_nav_menu_items( $nav_menu_selected_id, array('orderby' => 'ID', 'output' => ARRAY_A, 'output_key' => 'ID') );
-				$post_fields = array( 'menu-item-db-id', 'menu-item-object-id', 'menu-item-object', 'menu-item-parent-id', 'menu-item-position', 'menu-item-type', 'menu-item-append', 'menu-item-title', 'menu-item-url', 'menu-item-description', 'menu-item-attr-title', 'menu-item-target', 'menu-item-classes', 'menu-item-xfn' );
+				$post_fields = array( 'menu-item-db-id', 'menu-item-object-id', 'menu-item-object', 'menu-item-parent-id', 'menu-item-position', 'menu-item-type', 'menu-item-title', 'menu-item-url', 'menu-item-description', 'menu-item-attr-title', 'menu-item-target', 'menu-item-classes', 'menu-item-xfn' );
+				wp_defer_term_counting(true);
 				// Loop through all the menu items' POST variables
 				if ( ! empty( $_POST['menu-item-db-id'] ) ) {
 					foreach( (array) $_POST['menu-item-db-id'] as $_key => $k ) {
@@ -329,6 +332,8 @@ switch ( $action ) {
 						}
 					}
 				}
+
+				wp_defer_term_counting(false);
 
 				do_action( 'wp_update_nav_menu', $nav_menu_selected_id );
 
@@ -424,7 +429,7 @@ require_once( 'admin-header.php' );
 		<div id="menu-management">
 			<div id="select-nav-menu-container" class="hide-if-js">
 				<form id="select-nav-menu" action="">
-					<strong><label for="select-nav-menu"><?php esc_html_e( 'Select Menu: ' ); ?></label></strong>
+					<strong><label for="select-nav-menu"><?php esc_html_e( 'Select Menu:' ); ?></label></strong>
 					<select class="select-nav-menu" name="menu">
 						<?php foreach( (array) $nav_menus as $_nav_menu ) : ?>
 							<option value="<?php echo esc_attr($_nav_menu->term_id) ?>" <?php selected($nav_menu_selected_id, $_nav_menu->term_id); ?>>
@@ -441,23 +446,23 @@ require_once( 'admin-header.php' );
 			<div class="nav-tabs">
 				<?php
 				foreach( (array) $nav_menus as $_nav_menu ) :
-
-					?><a href="<?php
-						echo esc_url(add_query_arg(
-							array(
-								'action' => 'edit',
-								'menu' => $_nav_menu->term_id,
-							),
-							admin_url( 'nav-menus.php' )
-						));
-					?>" class="nav-tab<?php
-						if ( $nav_menu_selected_id == $_nav_menu->term_id )
-							echo ' nav-tab-active';
-						else
-							echo ' hide-if-no-js';
-					?>"><?php echo esc_html( $_nav_menu->truncated_name ); ?></a><?php
+					if ( $nav_menu_selected_id == $_nav_menu->term_id ) : ?><span class="nav-tab nav-tab-active">
+							<?php echo esc_html( $_nav_menu->truncated_name ); ?>
+						</span><?php else : ?><a href="<?php
+							echo esc_url(add_query_arg(
+								array(
+									'action' => 'edit',
+									'menu' => $_nav_menu->term_id,
+								),
+								admin_url( 'nav-menus.php' )
+							));
+						?>" class="nav-tab hide-if-no-js">
+							<?php echo esc_html( $_nav_menu->truncated_name ); ?>
+						</a><?php endif;
 				endforeach;
-				?><a href="<?php
+				if ( 0 == $nav_menu_selected_id ) : ?><span class="nav-tab menu-add-new nav-tab-active">
+					<?php printf( '<abbr title="%s">+</abbr>', esc_html__( 'Add menu' ) ); ?>
+				</span><?php else : ?><a href="<?php
 					echo esc_url(add_query_arg(
 						array(
 							'action' => 'edit',
@@ -465,10 +470,9 @@ require_once( 'admin-header.php' );
 						),
 						admin_url( 'nav-menus.php' )
 					));
-				?>" class="nav-tab menu-add-new<?php
-					if ( 0 == $nav_menu_selected_id )
-						echo ' nav-tab-active';
-				?>"><?php printf( '<abbr title="%s">+</abbr>', esc_html__( 'Add menu' ) ); ?></a>
+				?>" class="nav-tab menu-add-new">
+					<?php printf( '<abbr title="%s">+</abbr>', esc_html__( 'Add menu' ) ); ?>
+				</a><?php endif; ?>
 			</div>
 			</div>
 			<div class="menu-edit">
@@ -478,12 +482,12 @@ require_once( 'admin-header.php' );
 							<div class="major-publishing-actions">
 								<label class="menu-name-label howto open-label" for="menu-name">
 									<span><?php _e('Menu Name'); ?></span>
-									<input name="menu-name" id="menu-name" type="text" class="menu-name regular-text menu-item-textbox input-with-default-title" title="Enter menu name here." value="<?php echo esc_attr( $nav_menu_selected_title  ); ?>" />
+									<input name="menu-name" id="menu-name" type="text" class="menu-name regular-text menu-item-textbox input-with-default-title" title="<?php esc_attr_e('Enter menu name here.'); ?>" value="<?php echo esc_attr( $nav_menu_selected_title  ); ?>" />
 									<br class="clear" />
 								</label>
 
 								<div class="publishing-action">
-									<input class="button-primary" name="save_menu" type="submit" value="<?php empty($nav_menu_selected_id) ? esc_attr_e('Create Menu') : esc_attr_e('Save Menu'); ?>" />
+									<input class="button-primary menu-save" name="save_menu" type="submit" value="<?php empty($nav_menu_selected_id) ? esc_attr_e('Create Menu') : esc_attr_e('Save Menu'); ?>" />
 								</div><!--END .publishing-action-->
 
 								<?php if ( ! empty( $nav_menu_selected_id ) ) : ?>

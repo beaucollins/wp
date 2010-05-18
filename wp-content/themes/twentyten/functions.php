@@ -9,11 +9,11 @@
  * The first function, twentyten_setup(), sets up the theme by registering support
  * for various features in WordPress, such as post thumbnails, navigation menus, and the like.
  *
- * When using a child theme (see http://codex.wordpress.org/Theme_Development), you can
- * override certain functions (those wrapped in a function_exists() call) by defining
- * them first in your child theme's functions.php file. The child theme's functions.php
- * file is included before the parent theme's file, so the child theme functions would
- * be used.
+ * When using a child theme (see http://codex.wordpress.org/Theme_Development and
+ * http://codex.wordpress.org/Child_Themes), you can override certain functions
+ * (those wrapped in a function_exists() call) by defining them first in your child theme's
+ * functions.php file. The child theme's functions.php file is included before the parent
+ * theme's file, so the child theme functions would be used.
  *
  * Functions that are not pluggable (not wrapped in function_exists()) are instead attached
  * to a filter or action hook. The hook can be removed by using remove_action() or
@@ -34,8 +34,8 @@
  * For more information on hooks, see http://codex.wordpress.org/Plugin_API.
  *
  * @package WordPress
- * @subpackage Twenty Ten
- * @since 3.0.0
+ * @subpackage Twenty_Ten
+ * @since Twenty Ten 1.0
  */
 
 /**
@@ -50,7 +50,7 @@ if ( ! isset( $content_width ) )
 /** Tell WordPress to run twentyten_setup() when the 'after_setup_theme' hook is run. */
 add_action( 'after_setup_theme', 'twentyten_setup' );
 
-if ( ! function_exists('twentyten_setup') ):
+if ( ! function_exists( 'twentyten_setup' ) ):
 /**
  * Sets up theme defaults and registers support for various WordPress features.
  *
@@ -69,7 +69,7 @@ if ( ! function_exists('twentyten_setup') ):
  * @uses register_default_headers() To register the default custom header images provided with the theme.
  * @uses set_post_thumbnail_size() To set a custom post thumbnail size.
  *
- * @since 3.0.0
+ * @since Twenty Ten 1.0
  */
 function twentyten_setup() {
 
@@ -78,9 +78,6 @@ function twentyten_setup() {
 
 	// This theme uses post thumbnails
 	add_theme_support( 'post-thumbnails' );
-
-	// This theme uses wp_nav_menu()
-	add_theme_support( 'nav-menus' );
 
 	// Add default posts and comments RSS feed links to head
 	add_theme_support( 'automatic-feed-links' );
@@ -93,6 +90,11 @@ function twentyten_setup() {
 	$locale_file = TEMPLATEPATH . "/languages/$locale.php";
 	if ( is_readable( $locale_file ) )
 		require_once( $locale_file );
+
+	// This theme uses wp_nav_menu() in one location.
+	register_nav_menus( array(
+		'primary' => __( 'Primary Menu', 'twentyten' ),
+	) );
 
 	// This theme allows users to set a custom background
 	add_custom_background();
@@ -121,45 +123,53 @@ function twentyten_setup() {
 	// ... and thus ends the changeable header business.
 
 	// Default custom headers packaged with the theme. %s is a placeholder for the theme template directory URI.
-	register_default_headers( array (
-		'berries' => array (
+	register_default_headers( array(
+		'berries' => array(
 			'url' => '%s/images/headers/berries.jpg',
 			'thumbnail_url' => '%s/images/headers/berries-thumbnail.jpg',
+			/* translators: header image description */
 			'description' => __( 'Berries', 'twentyten' )
 		),
-		'cherryblossom' => array (
+		'cherryblossom' => array(
 			'url' => '%s/images/headers/cherryblossoms.jpg',
 			'thumbnail_url' => '%s/images/headers/cherryblossoms-thumbnail.jpg',
+			/* translators: header image description */			
 			'description' => __( 'Cherry Blossoms', 'twentyten' )
 		),
-		'concave' => array (
+		'concave' => array(
 			'url' => '%s/images/headers/concave.jpg',
 			'thumbnail_url' => '%s/images/headers/concave-thumbnail.jpg',
+			/* translators: header image description */			
 			'description' => __( 'Concave', 'twentyten' )
 		),
-		'fern' => array (
+		'fern' => array(
 			'url' => '%s/images/headers/fern.jpg',
 			'thumbnail_url' => '%s/images/headers/fern-thumbnail.jpg',
+			/* translators: header image description */			
 			'description' => __( 'Fern', 'twentyten' )
 		),
-		'forestfloor' => array (
+		'forestfloor' => array(
 			'url' => '%s/images/headers/forestfloor.jpg',
 			'thumbnail_url' => '%s/images/headers/forestfloor-thumbnail.jpg',
+			/* translators: header image description */			
 			'description' => __( 'Forest Floor', 'twentyten' )
 		),
-		'inkwell' => array (
+		'inkwell' => array(
 			'url' => '%s/images/headers/inkwell.jpg',
 			'thumbnail_url' => '%s/images/headers/inkwell-thumbnail.jpg',
+			/* translators: header image description */			
 			'description' => __( 'Inkwell', 'twentyten' )
 		),
-		'path' => array (
+		'path' => array(
 			'url' => '%s/images/headers/path.jpg',
 			'thumbnail_url' => '%s/images/headers/path-thumbnail.jpg',
+			/* translators: header image description */			
 			'description' => __( 'Path', 'twentyten' )
 		),
-		'sunset' => array (
+		'sunset' => array(
 			'url' => '%s/images/headers/sunset.jpg',
 			'thumbnail_url' => '%s/images/headers/sunset-thumbnail.jpg',
+			/* translators: header image description */			
 			'description' => __( 'Sunset', 'twentyten' )
 		)
 	) );
@@ -172,7 +182,7 @@ if ( ! function_exists( 'twentyten_admin_header_style' ) ) :
  *
  * Referenced via add_custom_image_header() in twentyten_setup().
  *
- * @since 3.0.0
+ * @since Twenty Ten 1.0
  */
 function twentyten_admin_header_style() {
 ?>
@@ -195,25 +205,28 @@ if ( ! function_exists( 'twentyten_the_page_number' ) ) :
  *
  * Used in Twenty Ten's header.php to add the page number to the <title> HTML tag.
  *
- * @since 3.0.0
+ * @since Twenty Ten 1.0
  */
 function twentyten_the_page_number() {
 	global $paged; // Contains page number.
 	if ( $paged >= 2 )
-		echo ' | ' . sprintf( __( 'Page %s' , 'twentyten' ), $paged );
+		echo ' | ' . sprintf( __( 'Page %s', 'twentyten' ), $paged );
 }
 endif;
 
-if ( ! function_exists( 'twentyten_page_menu_args' ) ) :
 /**
  * Get our wp_nav_menu() fallback, wp_page_menu(), to show a home link.
+ *
+ * To override this in a child theme, remove the filter and optionally add
+ * your own function tied to the wp_page_menu_args filter hook.
+ *
+ * @since Twenty Ten 1.0
  */
-function twentyten_page_menu_args($args) {
+function twentyten_page_menu_args( $args ) {
 	$args['show_home'] = true;
 	return $args;
 }
-add_filter('wp_page_menu_args', 'twentyten_page_menu_args');
-endif;
+add_filter( 'wp_page_menu_args', 'twentyten_page_menu_args' );
 
 /**
  * Sets the post excerpt length to 40 characters.
@@ -221,6 +234,7 @@ endif;
  * To override this length in a child theme, remove the filter and add your own
  * function tied to the excerpt_length filter hook.
  *
+ * @since Twenty Ten 1.0
  * @return int
  */
 function twentyten_excerpt_length( $length ) {
@@ -234,7 +248,7 @@ add_filter( 'excerpt_length', 'twentyten_excerpt_length' );
  * To override this link in a child theme, remove the filter and add your own
  * function tied to the excerpt_more filter hook.
  *
- * @since 3.0.0
+ * @since Twenty Ten 1.0
  * @return string A pretty 'Continue reading' link.
  */
 function twentyten_excerpt_more( $more ) {
@@ -247,6 +261,7 @@ add_filter( 'excerpt_more', 'twentyten_excerpt_more' );
  *
  * Galleries are styled by the theme in Twenty Ten's style.css.
  *
+ * @since Twenty Ten 1.0
  * @return string The gallery style filter, with the styles themselves removed.
  */
 function twentyten_remove_gallery_css( $css ) {
@@ -263,23 +278,28 @@ if ( ! function_exists( 'twentyten_comment' ) ) :
  *
  * Used as a callback by wp_list_comments() for displaying the comments.
  *
- * @since 3.0.0
+ * @since Twenty Ten 1.0
  */
 function twentyten_comment( $comment, $args, $depth ) {
-	$GLOBALS ['comment'] = $comment; ?>
+	$GLOBALS['comment'] = $comment; ?>
 	<?php if ( '' == $comment->comment_type ) : ?>
 	<li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
 		<div id="comment-<?php comment_ID(); ?>">
 		<div class="comment-author vcard">
 			<?php echo get_avatar( $comment, 40 ); ?>
-			<?php printf( __( '<cite class="fn">%s</cite> <span class="says">says:</span>', 'twentyten' ), get_comment_author_link() ); ?>
+			<?php printf( __( '%s <span class="says">says:</span>', 'twentyten' ), sprintf( '<cite class="fn">%s</cite>', get_comment_author_link() ) ); ?>
 		</div>
 		<?php if ( $comment->comment_approved == '0' ) : ?>
 			<em><?php _e( 'Your comment is awaiting moderation.', 'twentyten' ); ?></em>
 			<br />
 		<?php endif; ?>
 
-		<div class="comment-meta commentmetadata"><a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>"><?php printf( __( '%1$s at %2$s', 'twentyten' ), get_comment_date(),  get_comment_time() ); ?></a><?php edit_comment_link( __( '(Edit)', 'twentyten' ), ' ' ); ?></div>
+		<div class="comment-meta commentmetadata"><a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>">
+			<?php
+				/* translators: 1: date, 2: time */
+				printf( __( '%1$s at %2$s', 'twentyten' ), get_comment_date(),  get_comment_time() ); ?></a><?php edit_comment_link( __( '(Edit)', 'twentyten' ), ' ' );
+			?>
+		</div>
 
 		<div class="comment-body"><?php comment_text(); ?></div>
 
@@ -290,7 +310,7 @@ function twentyten_comment( $comment, $args, $depth ) {
 
 	<?php else : ?>
 	<li class="post pingback">
-		<p><?php _e( 'Pingback:', 'twentyten' ); ?> <?php comment_author_link(); ?><?php edit_comment_link ( __('(Edit)', 'twentyten'), ' ' ); ?></p>
+		<p><?php _e( 'Pingback:', 'twentyten' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( __('(Edit)', 'twentyten'), ' ' ); ?></p>
 	<?php endif;
 }
 endif;
@@ -300,79 +320,87 @@ endif;
  *
  * To override twentyten_widgets_init() in a child theme, remove the action hook and add your own
  * function tied to the init hook.
+ *
+ * @since Twenty Ten 1.0
  * @uses register_sidebar
  */
 function twentyten_widgets_init() {
 	// Area 1
-	register_sidebar( array (
+	register_sidebar( array(
 		'name' => __( 'Primary Widget Area', 'twentyten' ),
 		'id' => 'primary-widget-area',
 		'description' => __( 'The primary widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => "</li>",
+		'after_widget' => '</li>',
 		'before_title' => '<h3 class="widget-title">',
 		'after_title' => '</h3>',
 	) );
 
 	// Area 2
-	register_sidebar( array (
+	register_sidebar( array(
 		'name' => __( 'Secondary Widget Area', 'twentyten' ),
 		'id' => 'secondary-widget-area',
 		'description' => __( 'The secondary widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => "</li>",
+		'after_widget' => '</li>',
 		'before_title' => '<h3 class="widget-title">',
 		'after_title' => '</h3>',
 	) );
 
 	// Area 3
-	register_sidebar( array (
+	register_sidebar( array(
 		'name' => __( 'First Footer Widget Area', 'twentyten' ),
 		'id' => 'first-footer-widget-area',
 		'description' => __( 'The first footer widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => "</li>",
+		'after_widget' => '</li>',
 		'before_title' => '<h3 class="widget-title">',
 		'after_title' => '</h3>',
 	) );
 
 	// Area 4
-	register_sidebar( array (
+	register_sidebar( array(
 		'name' => __( 'Second Footer Widget Area', 'twentyten' ),
 		'id' => 'second-footer-widget-area',
 		'description' => __( 'The second footer widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => "</li>",
+		'after_widget' => '</li>',
 		'before_title' => '<h3 class="widget-title">',
 		'after_title' => '</h3>',
 	) );
 
 	// Area 5
-	register_sidebar( array (
+	register_sidebar( array(
 		'name' => __( 'Third Footer Widget Area', 'twentyten' ),
 		'id' => 'third-footer-widget-area',
 		'description' => __( 'The third footer widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => "</li>",
+		'after_widget' => '</li>',
 		'before_title' => '<h3 class="widget-title">',
 		'after_title' => '</h3>',
 	) );
 
 	// Area 6
-	register_sidebar( array (
+	register_sidebar( array(
 		'name' => __( 'Fourth Footer Widget Area', 'twentyten' ),
 		'id' => 'fourth-footer-widget-area',
 		'description' => __( 'The fourth footer widget area', 'twentyten' ),
 		'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
-		'after_widget' => "</li>",
+		'after_widget' => '</li>',
 		'before_title' => '<h3 class="widget-title">',
 		'after_title' => '</h3>',
 	) );
 }
-add_action( 'init', 'twentyten_widgets_init' );
+/** Register sidebars by running twentyten_widgets_init() on the widgets_init hook. */
+add_action( 'widgets_init', 'twentyten_widgets_init' );
 
 /**
  * Removes the default styles that are packaged with the Recent Comments widget.
+ *
+ * To override this in a child theme, remove the filter and optionally add your own
+ * function tied to the widgets_init action hook.
+ *
+ * @since Twenty Ten 1.0
  */
 function twentyten_remove_recent_comments_style() {
 	global $wp_widget_factory;
@@ -380,21 +408,51 @@ function twentyten_remove_recent_comments_style() {
 }
 add_action( 'widgets_init', 'twentyten_remove_recent_comments_style' );
 
+if ( ! function_exists( 'twentyten_posted_on' ) ) :
 /**
- * Get the URL of the next image in a gallery for attachment pages
+ * Prints HTML with meta information for the current post—date/time and author.
+ *
+ * @since Twenty Ten 1.0
  */
-function twentyten_get_next_attachment_url() {
-	global $post;
-	$post = get_post($post);
-	$attachments = array_values( get_children( array( 'post_parent' => $post->post_parent, 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC', 'orderby' => 'menu_order ID' ) ) );
- 
-	foreach ( $attachments as $k => $attachment ) {
-		if ( $attachment->ID == $post->ID )
-			break;
-	}
-	$k++;
-	if ( isset( $attachments[ $k ] ) )
-		return get_attachment_link( $attachments[ $k ]->ID );
-	else
-		return get_permalink( $post->post_parent );
+function twentyten_posted_on() {
+	printf( __( '<span %1$s>Posted on</span> %2$s by %3$s', 'twentyten' ),
+		'class="meta-prep meta-prep-author"',
+		sprintf( '<a href="%1$s" title="%2$s" rel="bookmark"><span class="entry-date">%3$s</span></a> <span class="meta-sep">',
+			get_permalink(),
+			esc_attr( get_the_time() ),
+			get_the_date()
+		),
+		sprintf( '</span> <span class="author vcard"><a class="url fn n" href="%1$s" title="%2$s">%3$s</a></span>', 
+			get_author_posts_url( get_the_author_meta( 'ID' ) ),
+			sprintf( esc_attr__( 'View all posts by %s', 'twentyten' ), get_the_author() ),
+			get_the_author()
+		)
+	);
+	
 }
+endif;
+
+if ( ! function_exists( 'twentyten_posted_in' ) ) :
+/**
+ * Prints HTML with meta information for the current post (category, tags and permalink).
+ *
+ * @since Twenty Ten 1.0
+ */
+function twentyten_posted_in() {
+	// Retrieves tag list of current post, separated by commas.
+	$tag_list = get_the_tag_list( '', ', ' );
+	if ( $tag_list ) {
+		$posted_in = __( 'This entry was posted in %1$s and tagged %2$s. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'twentyten' );
+	} else {
+		$posted_in = __( 'This entry was posted in %1$s. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'twentyten' );
+	}
+	// Prints the string, replacing the placeholders.
+	printf(
+		$posted_in,
+		get_the_category_list( ', ' ),
+		$tag_list,
+		get_permalink(),
+		the_title_attribute( 'echo=0' )
+	);	
+}
+endif;

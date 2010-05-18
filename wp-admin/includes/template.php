@@ -13,16 +13,16 @@
  *
  * @since 2.7
  *
- * Outputs the HTML for the hidden table rows used in Categories, Link Categories and Tags quick edit.
+ * Outputs the HTML for the hidden table rows used in Categories, Link Caregories and Tags quick edit.
  *
- * @param string $type "edit-tags", "categories" or "edit-link-categories"
+ * @param string $type "edit-tags", "categoried" or "edit-link-categories"
  * @param string $taxonomy The taxonomy of the row.
  * @return
  */
 function inline_edit_term_row($type, $taxonomy) {
 
 	$tax = get_taxonomy($taxonomy);
-	if ( ! current_user_can( $tax->edit_cap ) )
+	if ( ! current_user_can( $tax->cap->edit_terms ) )
 		return;
 
 	$columns = get_column_headers($type);
@@ -63,7 +63,7 @@ function inline_edit_term_row($type, $taxonomy) {
 
 	<p class="inline-edit-save submit">
 		<a accesskey="c" href="#inline-edit" title="<?php _e('Cancel'); ?>" class="cancel button-secondary alignleft"><?php _e('Cancel'); ?></a>
-		<?php $update_text = sprintf( __('Update %s'), $tax->singular_label ); ?>
+		<?php $update_text = $tax->labels->update_item; ?>
 		<a accesskey="s" href="#inline-edit" title="<?php echo esc_attr( $update_text ); ?>" class="save button-primary alignright"><?php echo $update_text; ?></a>
 		<img class="waiting" style="display:none;" src="<?php echo esc_url( admin_url( 'images/wpspin_light.gif' ) ); ?>" alt="" />
 		<span class="error" style="display:none;"></span>
@@ -261,7 +261,7 @@ function wp_terms_checklist($post_id = 0, $args = array()) {
 	$args = array('taxonomy' => $taxonomy);
 
 	$tax = get_taxonomy($taxonomy);
-	$args['disabled'] = !current_user_can($tax->assign_cap);
+	$args['disabled'] = !current_user_can($tax->cap->assign_terms);
 
 	if ( is_array( $selected_cats ) )
 		$args['selected_cats'] = $selected_cats;
@@ -324,7 +324,7 @@ function wp_popular_terms_checklist( $taxonomy, $default = 0, $number = 10, $ech
 	$terms = get_terms( $taxonomy, array( 'orderby' => 'count', 'order' => 'DESC', 'number' => $number, 'hierarchical' => false ) );
 
 	$tax = get_taxonomy($taxonomy);
-	if ( ! current_user_can($tax->assign_cap) )
+	if ( ! current_user_can($tax->cap->assign_terms) )
 		$disabled = 'disabled="disabled"';
 	else
 		$disabled = '';
@@ -436,7 +436,7 @@ function _tag_row( $tag, $level, $taxonomy = 'post_tag' ) {
 
 			switch ($column_name) {
 				case 'cb':
-					if ( current_user_can($tax->delete_cap) && $tag->term_id != $default_term )
+					if ( current_user_can($tax->cap->delete_terms) && $tag->term_id != $default_term )
 						$out .= '<th scope="row" class="check-column"> <input type="checkbox" name="delete_tags[]" value="' . $tag->term_id . '" /></th>';
 					else
 						$out .= '<th scope="row" class="check-column">&nbsp;</th>';
@@ -444,11 +444,11 @@ function _tag_row( $tag, $level, $taxonomy = 'post_tag' ) {
 				case 'name':
 					$out .= '<td ' . $attributes . '><strong><a class="row-title" href="' . $edit_link . '" title="' . esc_attr(sprintf(__('Edit &#8220;%s&#8221;'), $name)) . '">' . $name . '</a></strong><br />';
 					$actions = array();
-					if ( current_user_can($tax->edit_cap) ) {
+					if ( current_user_can($tax->cap->edit_terms) ) {
 						$actions['edit'] = '<a href="' . $edit_link . '">' . __('Edit') . '</a>';
 						$actions['inline hide-if-no-js'] = '<a href="#" class="editinline">' . __('Quick&nbsp;Edit') . '</a>';
 					}
-					if ( current_user_can($tax->delete_cap) && $tag->term_id != $default_term )
+					if ( current_user_can($tax->cap->delete_terms) && $tag->term_id != $default_term )
 						$actions['delete'] = "<a class='delete-tag' href='" . wp_nonce_url("edit-tags.php?action=delete&amp;taxonomy=$taxonomy&amp;tag_ID=$tag->term_id", 'delete-tag_' . $tag->term_id) . "'>" . __('Delete') . "</a>";
 
 					$actions = apply_filters('tag_row_actions', $actions, $tag);
@@ -664,12 +664,12 @@ function wp_manage_pages_columns() {
 }
 
 /**
- * {@internal Missing Short Description}}
+ * Get the column headers for a screen
  *
  * @since unknown
  *
- * @param unknown_type $screen
- * @return unknown
+ * @param string|object $screen The screen you want the headers for
+ * @return array Containing the headers in the format id => UI String
  */
 function get_column_headers($screen) {
 	global $_wp_column_headers;
@@ -876,7 +876,7 @@ function inline_edit_row( $screen ) {
 	$hidden = array_intersect( array_keys( $columns ), array_filter( get_hidden_columns($screen) ) );
 	$col_count = count($columns) - count($hidden);
 	$m = ( isset($mode) && 'excerpt' == $mode ) ? 'excerpt' : 'list';
-	$can_publish = current_user_can($post_type_object->publish_cap);
+	$can_publish = current_user_can($post_type_object->cap->publish_posts);
 	$core_columns = array( 'cb' => true, 'date' => true, 'title' => true, 'categories' => true, 'tags' => true, 'comments' => true, 'author' => true );
 
 ?>
@@ -976,7 +976,7 @@ if ( !$bulk ) :
 
 <?php foreach ( $hierarchical_taxonomies as $taxonomy ) : ?>
 
-		<span class="title inline-edit-categories-label"><?php echo esc_html($taxonomy->label) ?>
+		<span class="title inline-edit-categories-label"><?php echo esc_html($taxonomy->labels->name) ?>
 			<span class="catshow"><?php _e('[more]'); ?></span>
 			<span class="cathide" style="display:none;"><?php _e('[less]'); ?></span>
 		</span>
@@ -1040,7 +1040,7 @@ endif; // $post_type_object->hierarchical ?>
 <?php foreach ( $flat_taxonomies as $taxonomy ) : ?>
 
 		<label class="inline-edit-tags">
-			<span class="title"><?php echo esc_html($taxonomy->label) ?></span>
+			<span class="title"><?php echo esc_html($taxonomy->labels->name) ?></span>
 			<textarea cols="22" rows="1" name="tax_input[<?php echo esc_attr($taxonomy->name)?>]" class="tax_input_<?php echo esc_attr($taxonomy->name)?>"></textarea>
 		</label>
 
@@ -1111,7 +1111,7 @@ endif; // post_type_supports comments or pings ?>
 				</select>
 			</label>
 
-<?php if ( 'post' == $screen->post_type && $can_publish && current_user_can( $post_type_object->edit_others_cap ) ) : ?>
+<?php if ( 'post' == $screen->post_type && $can_publish && current_user_can( $post_type_object->cap->edit_others_posts ) ) : ?>
 
 <?php	if ( $bulk ) : ?>
 
@@ -1181,7 +1181,7 @@ endif; // post_type_supports comments or pings ?>
  */
 function get_inline_data($post) {
 	$post_type_object = get_post_type_object($post->post_type);
-	if ( ! current_user_can($post_type_object->edit_cap, $post->ID) )
+	if ( ! current_user_can($post_type_object->cap->edit_post, $post->ID) )
 		return;
 
 	$title = esc_attr( get_the_title( $post->ID ) );
@@ -1298,7 +1298,7 @@ function _post_row($a_post, $pending_comments, $mode) {
 
 		case 'cb':
 		?>
-		<th scope="row" class="check-column"><?php if ( current_user_can( $post_type_object->edit_cap, $post->ID ) ) { ?><input type="checkbox" name="post[]" value="<?php the_ID(); ?>" /><?php } ?></th>
+		<th scope="row" class="check-column"><?php if ( current_user_can( $post_type_object->cap->edit_post, $post->ID ) ) { ?><input type="checkbox" name="post[]" value="<?php the_ID(); ?>" /><?php } ?></th>
 		<?php
 		break;
 
@@ -1341,17 +1341,17 @@ function _post_row($a_post, $pending_comments, $mode) {
 		case 'title':
 			$attributes = 'class="post-title column-title"' . $style;
 		?>
-		<td <?php echo $attributes ?>><strong><?php if ( current_user_can($post_type_object->edit_cap, $post->ID) && $post->post_status != 'trash' ) { ?><a class="row-title" href="<?php echo $edit_link; ?>" title="<?php echo esc_attr(sprintf(__('Edit &#8220;%s&#8221;'), $title)); ?>"><?php echo $title ?></a><?php } else { echo $title; }; _post_states($post); ?></strong>
+		<td <?php echo $attributes ?>><strong><?php if ( current_user_can($post_type_object->cap->edit_post, $post->ID) && $post->post_status != 'trash' ) { ?><a class="row-title" href="<?php echo $edit_link; ?>" title="<?php echo esc_attr(sprintf(__('Edit &#8220;%s&#8221;'), $title)); ?>"><?php echo $title ?></a><?php } else { echo $title; }; _post_states($post); ?></strong>
 		<?php
 			if ( 'excerpt' == $mode )
 				the_excerpt();
 
 			$actions = array();
-			if ( current_user_can($post_type_object->edit_cap, $post->ID) && 'trash' != $post->post_status ) {
+			if ( current_user_can($post_type_object->cap->edit_post, $post->ID) && 'trash' != $post->post_status ) {
 				$actions['edit'] = '<a href="' . get_edit_post_link($post->ID, true) . '" title="' . esc_attr(__('Edit this post')) . '">' . __('Edit') . '</a>';
 				$actions['inline hide-if-no-js'] = '<a href="#" class="editinline" title="' . esc_attr(__('Edit this post inline')) . '">' . __('Quick&nbsp;Edit') . '</a>';
 			}
-			if ( current_user_can($post_type_object->delete_cap, $post->ID) ) {
+			if ( current_user_can($post_type_object->cap->delete_post, $post->ID) ) {
 				if ( 'trash' == $post->post_status )
 					$actions['untrash'] = "<a title='" . esc_attr(__('Restore this post from the Trash')) . "' href='" . wp_nonce_url( admin_url( sprintf($post_type_object->_edit_link . '&amp;action=untrash', $post->ID) ), 'untrash-' . $post->post_type . '_' . $post->ID ) . "'>" . __('Restore') . "</a>";
 				elseif ( EMPTY_TRASH_DAYS )
@@ -1360,8 +1360,8 @@ function _post_row($a_post, $pending_comments, $mode) {
 					$actions['delete'] = "<a class='submitdelete' title='" . esc_attr(__('Delete this post permanently')) . "' href='" . get_delete_post_link($post->ID, '', true) . "'>" . __('Delete Permanently') . "</a>";
 			}
 			if ( in_array($post->post_status, array('pending', 'draft')) ) {
-				if ( current_user_can($post_type_object->edit_cap, $post->ID) )
-					$actions['view'] = '<a href="' . add_query_arg( 'preview', 'true', get_permalink($post->ID) ) . '" title="' . esc_attr(sprintf(__('Preview &#8220;%s&#8221;'), $title)) . '" rel="permalink">' . __('Preview') . '</a>';
+				if ( current_user_can($post_type_object->cap->edit_post, $post->ID) )
+					$actions['view'] = '<a href="' . esc_url( add_query_arg( 'preview', 'true', get_permalink($post->ID) ) ) . '" title="' . esc_attr(sprintf(__('Preview &#8220;%s&#8221;'), $title)) . '" rel="permalink">' . __('Preview') . '</a>';
 			} elseif ( 'trash' != $post->post_status ) {
 				$actions['view'] = '<a href="' . get_permalink($post->ID) . '" title="' . esc_attr(sprintf(__('View &#8220;%s&#8221;'), $title)) . '" rel="permalink">' . __('View') . '</a>';
 			}
@@ -1443,13 +1443,13 @@ function _post_row($a_post, $pending_comments, $mode) {
 
 		case 'control_edit':
 		?>
-		<td><?php if ( current_user_can($post_type_object->edit_cap, $post->ID) ) { echo "<a href='$edit_link' class='edit'>" . __('Edit') . "</a>"; } ?></td>
+		<td><?php if ( current_user_can($post_type_object->cap->edit_post, $post->ID) ) { echo "<a href='$edit_link' class='edit'>" . __('Edit') . "</a>"; } ?></td>
 		<?php
 		break;
 
 		case 'control_delete':
 		?>
-		<td><?php if ( current_user_can($post_type_object->delete_cap, $post->ID) ) { echo "<a href='" . wp_nonce_url("post.php?action=delete&amp;post=$id", 'delete-post_' . $post->ID) . "' class='delete'>" . __('Delete') . "</a>"; } ?></td>
+		<td><?php if ( current_user_can($post_type_object->cap->delete_post, $post->ID) ) { echo "<a href='" . wp_nonce_url("post.php?action=delete&amp;post=$id", 'delete-post_' . $post->ID) . "' class='delete'>" . __('Delete') . "</a>"; } ?></td>
 		<?php
 		break;
 
@@ -1566,14 +1566,14 @@ foreach ( $posts_columns as $column_name => $column_display_name ) {
 		$attributes = 'class="post-title page-title column-title"' . $style;
 		$edit_link = get_edit_post_link( $page->ID );
 		?>
-		<td <?php echo $attributes ?>><strong><?php if ( current_user_can($post_type_object->edit_cap, $page->ID) && $post->post_status != 'trash' ) { ?><a class="row-title" href="<?php echo $edit_link; ?>" title="<?php echo esc_attr(sprintf(__('Edit &#8220;%s&#8221;'), $title)); ?>"><?php echo $pad; echo $title ?></a><?php } else { echo $pad; echo $title; }; _post_states($page); echo isset($parent_name) ? ' | ' . __('Parent Page: ') . esc_html($parent_name) : ''; ?></strong>
+		<td <?php echo $attributes ?>><strong><?php if ( current_user_can($post_type_object->cap->edit_post, $page->ID) && $post->post_status != 'trash' ) { ?><a class="row-title" href="<?php echo $edit_link; ?>" title="<?php echo esc_attr(sprintf(__('Edit &#8220;%s&#8221;'), $title)); ?>"><?php echo $pad; echo $title ?></a><?php } else { echo $pad; echo $title; }; _post_states($page); echo isset($parent_name) ? ' | ' . $post_type_object->labels->parent_item_colon . ' ' . esc_html($parent_name) : ''; ?></strong>
 		<?php
 		$actions = array();
-		if ( current_user_can($post_type_object->edit_cap, $page->ID) && $post->post_status != 'trash' ) {
+		if ( current_user_can($post_type_object->cap->edit_post, $page->ID) && $post->post_status != 'trash' ) {
 			$actions['edit'] = '<a href="' . $edit_link . '" title="' . esc_attr(__('Edit this page')) . '">' . __('Edit') . '</a>';
 			$actions['inline'] = '<a href="#" class="editinline">' . __('Quick&nbsp;Edit') . '</a>';
 		}
-		if ( current_user_can($post_type_object->delete_cap, $page->ID) ) {
+		if ( current_user_can($post_type_object->cap->delete_post, $page->ID) ) {
 			if ( $post->post_status == 'trash' )
 				$actions['untrash'] = "<a title='" . esc_attr(__('Remove this page from the Trash')) . "' href='" . wp_nonce_url("post.php?post_type=$post_type&amp;action=untrash&amp;post=$page->ID", 'untrash-' . $post->post_type . '_' . $page->ID) . "'>" . __('Restore') . "</a>";
 			elseif ( EMPTY_TRASH_DAYS )
@@ -1582,8 +1582,8 @@ foreach ( $posts_columns as $column_name => $column_display_name ) {
 				$actions['delete'] = "<a class='submitdelete' title='" . esc_attr(__('Delete this page permanently')) . "' href='" . wp_nonce_url("post.php?post_type=$post_type&amp;action=delete&amp;post=$page->ID", 'delete-' . $post->post_type . '_' . $page->ID) . "'>" . __('Delete Permanently') . "</a>";
 		}
 		if ( in_array($post->post_status, array('pending', 'draft')) ) {
-			if ( current_user_can($post_type_object->edit_cap, $page->ID) )
-				$actions['view'] = '<a href="' . add_query_arg( 'preview', 'true', get_permalink($page->ID) ) . '" title="' . esc_attr(sprintf(__('Preview &#8220;%s&#8221;'), $title)) . '" rel="permalink">' . __('Preview') . '</a>';
+			if ( current_user_can($post_type_object->cap->edit_post, $page->ID) )
+				$actions['view'] = '<a href="' . esc_url( add_query_arg( 'preview', 'true', get_permalink($page->ID) ) ) . '" title="' . esc_attr(sprintf(__('Preview &#8220;%s&#8221;'), $title)) . '" rel="permalink">' . __('Preview') . '</a>';
 		} elseif ( $post->post_status != 'trash' ) {
 			$actions['view'] = '<a href="' . get_permalink($page->ID) . '" title="' . esc_attr(sprintf(__('View &#8220;%s&#8221;'), $title)) . '" rel="permalink">' . __('View') . '</a>';
 		}
@@ -2010,7 +2010,7 @@ function _wp_comment_row( $comment_id, $mode, $comment_status, $checkbox = true,
 	$post = get_post($comment->comment_post_ID);
 	$the_comment_status = wp_get_comment_status($comment->comment_ID);
 	$post_type_object = get_post_type_object($post->post_type);
-	$user_can = current_user_can($post_type_object->edit_cap, $post->ID);
+	$user_can = current_user_can($post_type_object->cap->edit_post, $post->ID);
 
 	$comment_url = esc_url(get_comment_link($comment->comment_ID));
 	$author_url = get_comment_author_url();
@@ -3245,8 +3245,8 @@ function manage_columns_prefs($page) {
 	$hidden = get_hidden_columns($page);
 
 	foreach ( $columns as $column => $title ) {
-		// Can't hide these
-		if ( 'cb' == $column || 'title' == $column || 'name' == $column || 'username' == $column || 'media' == $column || 'comment' == $column )
+		// Can't hide these or they are special
+		if ( '_title' == $column || 'cb' == $column || 'title' == $column || 'name' == $column || 'username' == $column || 'media' == $column || 'comment' == $column )
 			continue;
 		if ( empty($title) )
 			continue;
@@ -3328,10 +3328,10 @@ function favorite_actions( $screen = null ) {
 	if ( isset($post_type_object) ) {
 		switch ( $screen->id ) {
 			case $post_type_object->name:
-				$default_action = array('edit.php?post_type=' . $post_type_object->name => array(sprintf(__('Edit %s'), $post_type_object->label), $post_type_object->edit_type_cap));
+				$default_action = array('edit.php?post_type=' . $post_type_object->name => array($post_type_object->labels->edit_item, $post_type_object->cap->edit_posts));
 				break;
 			case "edit-{$post_type_object->name}":
-				$default_action = array('post-new.php?post_type=' . $post_type_object->name => array(sprintf(__('New %s'), $post_type_object->singular_label), $post_type_object->edit_type_cap));
+				$default_action = array('post-new.php?post_type=' . $post_type_object->name => array($post_type_object->labels->new_item, $post_type_object->cap->edit_posts));
 				break;
 		}
 	}
@@ -3545,7 +3545,12 @@ function _post_states($post) {
 	}
 }
 
-// Convert a screen string to a screen object
+/**
+ * Convert a screen string to a screen object
+ * 
+ * @param string $screen The name of the screen
+ * @return object An object containing the safe screen name and id
+ */
 function convert_to_screen( $screen ) {
 	$screen = str_replace('.php', '', $screen);
 	$screen = str_replace('-new', '', $screen);
@@ -3586,27 +3591,25 @@ function screen_meta($screen) {
 	switch ( $screen->id ) {
 		case 'widgets':
 			$settings = '<p><a id="access-on" href="widgets.php?widgets-access=on">' . __('Enable accessibility mode') . '</a><a id="access-off" href="widgets.php?widgets-access=off">' . __('Disable accessibility mode') . "</a></p>\n";
+			$show_screen = true;
 			break;
 	}
-	if( $settings )
+	if( !empty($settings) )
 		$show_screen = true;
 ?>
 <div id="screen-meta">
-<?php
-	if ( $show_screen ) :
-		$default_text = __('Show on screen');
-?>
+<?php if ( $show_screen ) : ?>
 <div id="screen-options-wrap" class="hidden">
 	<form id="adv-settings" action="" method="post">
 	<?php if ( isset($wp_meta_boxes[$screen->id]) ) : ?>
-		<h5><?php echo apply_filters('meta_box_prefs_header', $default_text); ?></h5>
+		<h5><?php _ex('Show on screen', 'Metaboxes') ?></h5>
 		<div class="metabox-prefs">
 			<?php meta_box_prefs($screen); ?>
 			<br class="clear" />
 		</div>
 		<?php endif;
-		if ( isset($column_screens) ) : ?>
-		<h5><?php echo apply_filters('columns_prefs_header', $default_text); ?></h5>
+		if ( ! empty($column_screens) ) : ?>
+		<h5><?php echo ( isset( $column_screens['_title'] ) ?  $column_screens['_title'] :  _x('Show on screen', 'Columns') ) ?></h5>
 		<div class="metabox-prefs">
 			<?php manage_columns_prefs($screen); ?>
 			<br class="clear" />
@@ -3619,8 +3622,7 @@ function screen_meta($screen) {
 </form>
 </div>
 
-<?php
-	endif;
+<?php endif; // $show_screen
 
 	$_wp_contextual_help = apply_filters('contextual_help_list', $_wp_contextual_help, $screen);
 	?>
@@ -3706,7 +3708,7 @@ function screen_layout($screen) {
 	if ( is_string($screen) )
 		$screen = convert_to_screen($screen);
 
-	$columns = array('dashboard' => 4, 'post' => 2, 'page' => 2, 'link' => 2);
+	$columns = array('dashboard' => 4, 'link' => 2);
 
 	// Add custom post types
 	foreach ( get_post_types( array('show_ui' => true) ) as $post_type )
@@ -3746,7 +3748,7 @@ function screen_options($screen) {
 			if ( isset($_GET['post_type']) && in_array( $_GET['post_type'], get_post_types( array('public' => true ) ) ) )
 				$post_type = $_GET['post_type'];
 			$post_type_object = get_post_type_object($post_type);
-			$per_page_label = $post_type_object->label;
+			$per_page_label = $post_type_object->labels->name;
 			break;
 		case 'ms-sites':
 			$per_page_label = __('Sites');
@@ -3762,7 +3764,7 @@ function screen_options($screen) {
 			break;
 		case 'edit-tags':
 			global $tax;
-			$per_page_label = $tax->label;
+			$per_page_label = $tax->labels->name;
 			break;
 		case 'plugins':
 			$per_page_label = __('Plugins');

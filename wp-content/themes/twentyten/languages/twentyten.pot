@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Twenty Ten 1.0\n"
 "Report-Msgid-Bugs-To: http://wordpress.org/tag/twentyten\n"
-"POT-Creation-Date: 2010-05-09 12:21+0000\n"
+"POT-Creation-Date: 2010-05-17 08:22+0000\n"
 "PO-Revision-Date: 2010-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: 404.php:17 header.php:31 loop.php:27
+#: 404.php:17 header.php:29 loop.php:27
 msgid "Not Found"
 msgstr ""
 
@@ -27,22 +27,22 @@ msgid ""
 "will help."
 msgstr ""
 
-#: archive.php:24
+#: archive.php:33
 #, php-format
 msgid "Daily Archives: <span>%s</span>"
 msgstr ""
 
-#: archive.php:26
+#: archive.php:35
 #, php-format
 msgid "Monthly Archives: <span>%s</span>"
 msgstr ""
 
-#: archive.php:28
+#: archive.php:37
 #, php-format
 msgid "Yearly Archives: <span>%s</span>"
 msgstr ""
 
-#: archive.php:30
+#: archive.php:39
 msgid "Blog Archives"
 msgstr ""
 
@@ -53,91 +53,48 @@ msgstr ""
 
 #: attachment.php:25
 #, php-format
-msgid ""
-"<span class=\"meta-prep meta-prep-author\"> By </span> <span class=\"author "
-"vcard\"><a class=\"url fn n\" href=\"%1$s\" title=\"%2$s\">%3$s</a></span>"
+msgid "<span class=\"%1$s\">By</span> %2$s"
 msgstr ""
 
-#: attachment.php:27 loop.php:50 loop.php:101 loop.php:123 single.php:30
-#: single.php:47
+#: attachment.php:29 functions.php:427
 #, php-format
 msgid "View all posts by %s"
 msgstr ""
 
-#: attachment.php:33
+#: attachment.php:36
 #, php-format
-msgid ""
-"<span class=\"meta-prep meta-prep-entry-date\">Published </span> <span class="
-"\"entry-date\"><abbr class=\"published\" title=\"%1$s\">%2$s</abbr></span>"
+msgid "<span class=\"%1$s\">Published</span> %2$s"
 msgstr ""
 
-#: attachment.php:39
+#: attachment.php:46
 #, php-format
-msgid ""
-" at <a href=\"%1$s\" title=\"Link to full-size image\">%2$s &times; %3$s</a>"
+msgid "Full size is %s pixels"
 msgstr ""
 
-#: attachment.php:46 attachment.php:99 loop.php:77 loop.php:107 loop.php:145
-#: onecolumn-page.php:26 page.php:33 single.php:70
+#: attachment.php:49
+msgid "Link to full-size image"
+msgstr ""
+
+#: attachment.php:56 attachment.php:95 loop.php:84 loop.php:107 loop.php:149
+#: onecolumn-page.php:28 page.php:33 single.php:54
 msgid "Edit"
 msgstr ""
 
-#: attachment.php:67 functions.php:241 loop.php:86 loop.php:90 loop.php:131
-#: loop.php:135
+#: attachment.php:88 functions.php:255 loop.php:99 loop.php:123 loop.php:127
 msgid "Continue reading <span class=\"meta-nav\">&rarr;</span>"
 msgstr ""
 
-#: attachment.php:68 loop.php:136 onecolumn-page.php:25 page.php:32
-#: single.php:35
+#: attachment.php:89 loop.php:128 onecolumn-page.php:27 page.php:32
+#: single.php:32
 msgid "Pages:"
 msgstr ""
 
-#: attachment.php:76 single.php:57
+#: author.php:27
 #, php-format
-msgid ""
-"This entry was posted in %1$s and tagged %2$s. Bookmark the <a href=\"%3$s\" "
-"title=\"Permalink to %4$s\" rel=\"bookmark\">permalink</a>."
+msgid "Author Archives: %s"
 msgstr ""
 
-#: attachment.php:78 single.php:59
-#, php-format
-msgid ""
-"This entry was posted in %1$s. Bookmark the <a href=\"%3$s\" title="
-"\"Permalink to %4$s\" rel=\"bookmark\">permalink</a>."
-msgstr ""
-
-#: attachment.php:91
-#, php-format
-msgid ""
-"<a class=\"comment-link\" href=\"#respond\" title=\"Post a comment\">Post a "
-"comment</a> or leave a trackback: <a class=\"trackback-link\" href=\"%s\" "
-"title=\"Trackback URL for your post\" rel=\"trackback\">Trackback URL</a>."
-msgstr ""
-
-#: attachment.php:93
-#, php-format
-msgid ""
-"Comments are closed, but you can leave a trackback: <a class=\"trackback-link"
-"\" href=\"%s\" title=\"Trackback URL for your post\" rel=\"trackback"
-"\">Trackback URL</a>."
-msgstr ""
-
-#: attachment.php:95
-msgid ""
-"Trackbacks are closed, but you can <a class=\"comment-link\" href=\"#respond"
-"\" title=\"Post a comment\">post a comment</a>."
-msgstr ""
-
-#: attachment.php:97
-msgid "Both comments and trackbacks are currently closed."
-msgstr ""
-
-#: author.php:18
-#, php-format
-msgid "Author Archives: <span class=\"vcard\">%s</span>"
-msgstr ""
-
-#: author.php:26
+#: author.php:37 single.php:41
 #, php-format
 msgid "About %s"
 msgstr ""
@@ -152,225 +109,250 @@ msgid ""
 "This post is password protected. Enter the password to view any comments."
 msgstr ""
 
-#: comments.php:32
+#: comments.php:35
 #, php-format
 msgid "One Response to %2$s"
 msgid_plural "%1$s Responses to %2$s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: comments.php:39 comments.php:50
+#: comments.php:41 comments.php:60
 msgid "&larr; Older Comments"
 msgstr ""
 
-#: comments.php:40 comments.php:51
+#: comments.php:42 comments.php:61
 msgid "Newer Comments &rarr;"
 msgstr ""
 
-#: comments.php:61
+#: comments.php:72
 msgid "Comments are closed."
 msgstr ""
 
 #. #-#-#-#-#  twentyten.pot (Twenty Ten 1.0)  #-#-#-#-#
 #. Theme URI of the plugin/theme
-#: footer.php:28
+#: footer.php:33
 msgid "http://wordpress.org/"
 msgstr ""
 
-#: footer.php:29
+#: footer.php:34
 msgid "Semantic Personal Publishing Platform"
 msgstr ""
 
-#: footer.php:30
+#: footer.php:35
 #, php-format
 msgid "Proudly powered by %s."
 msgstr ""
 
-#: functions.php:128
+#: functions.php:96
+msgid "Primary Menu"
+msgstr ""
+
+#. translators: header image description
+#: functions.php:131
 msgid "Berries"
 msgstr ""
 
-#: functions.php:133
+#. translators: header image description
+#: functions.php:137
 msgid "Cherry Blossoms"
 msgstr ""
 
-#: functions.php:138
+#. translators: header image description
+#: functions.php:143
 msgid "Concave"
 msgstr ""
 
-#: functions.php:143
+#. translators: header image description
+#: functions.php:149
 msgid "Fern"
 msgstr ""
 
-#: functions.php:148
+#. translators: header image description
+#: functions.php:155
 msgid "Forest Floor"
 msgstr ""
 
-#: functions.php:153
+#. translators: header image description
+#: functions.php:161
 msgid "Inkwell"
 msgstr ""
 
-#: functions.php:158
+#. translators: header image description
+#: functions.php:167
 msgid "Path"
 msgstr ""
 
-#: functions.php:163
+#. translators: header image description
+#: functions.php:173
 msgid "Sunset"
 msgstr ""
 
-#: functions.php:203
+#: functions.php:213
 #, php-format
 msgid "Page %s"
 msgstr ""
 
-#: functions.php:275
+#: functions.php:290
 #, php-format
-msgid "<cite class=\"fn\">%s</cite> <span class=\"says\">says:</span>"
+msgid "%s <span class=\"says\">says:</span>"
 msgstr ""
 
-#: functions.php:278
+#: functions.php:293
 msgid "Your comment is awaiting moderation."
 msgstr ""
 
-#: functions.php:282
+#. translators: 1: date, 2: time
+#: functions.php:300
 #, php-format
 msgid "%1$s at %2$s"
 msgstr ""
 
-#: functions.php:282 functions.php:293
+#: functions.php:300 functions.php:313
 msgid "(Edit)"
 msgstr ""
 
-#: functions.php:293
+#: functions.php:313
 msgid "Pingback:"
 msgstr ""
 
-#: functions.php:308
+#: functions.php:330
 msgid "Primary Widget Area"
 msgstr ""
 
-#: functions.php:310
+#: functions.php:332
 msgid "The primary widget area"
 msgstr ""
 
-#: functions.php:319
+#: functions.php:341
 msgid "Secondary Widget Area"
 msgstr ""
 
-#: functions.php:321
+#: functions.php:343
 msgid "The secondary widget area"
 msgstr ""
 
-#: functions.php:330
+#: functions.php:352
 msgid "First Footer Widget Area"
 msgstr ""
 
-#: functions.php:332
+#: functions.php:354
 msgid "The first footer widget area"
 msgstr ""
 
-#: functions.php:341
+#: functions.php:363
 msgid "Second Footer Widget Area"
 msgstr ""
 
-#: functions.php:343
+#: functions.php:365
 msgid "The second footer widget area"
 msgstr ""
 
-#: functions.php:352
+#: functions.php:374
 msgid "Third Footer Widget Area"
 msgstr ""
 
-#: functions.php:354
+#: functions.php:376
 msgid "The third footer widget area"
 msgstr ""
 
-#: functions.php:363
+#: functions.php:385
 msgid "Fourth Footer Widget Area"
 msgstr ""
 
-#: functions.php:365
+#: functions.php:387
 msgid "The fourth footer widget area"
 msgstr ""
 
-#: header.php:29
+#: functions.php:418
 #, php-format
-msgid "Search results for \"%s\""
+msgid "<span %1$s>Posted on</span> %2$s by %3$s"
 msgstr ""
 
-#: header.php:70
+#: functions.php:445
+#, php-format
+msgid ""
+"This entry was posted in %1$s and tagged %2$s. Bookmark the <a href=\"%3$s\" "
+"title=\"Permalink to %4$s\" rel=\"bookmark\">permalink</a>."
+msgstr ""
+
+#: functions.php:447
+#, php-format
+msgid ""
+"This entry was posted in %1$s. Bookmark the <a href=\"%3$s\" title="
+"\"Permalink to %4$s\" rel=\"bookmark\">permalink</a>."
+msgstr ""
+
+#: header.php:27
+#, php-format
+msgid "Search results for %s"
+msgstr ""
+
+#: header.php:69
 msgid "Skip to content"
 msgstr ""
 
-#: loop.php:19 loop.php:157
+#: loop.php:19 loop.php:162
 msgid "<span class=\"meta-nav\">&larr;</span> Older posts"
 msgstr ""
 
-#: loop.php:20 loop.php:158
+#: loop.php:20 loop.php:163
 msgid "Newer posts <span class=\"meta-nav\">&rarr;</span>"
 msgstr ""
 
 #: loop.php:29
 msgid ""
-"Apologies, but no results were found for the requested Archive. Perhaps "
+"Apologies, but no results were found for the requested archive. Perhaps "
 "searching will help find a related post."
 msgstr ""
 
-#: loop.php:39 loop.php:74
+#: loop.php:54 loop.php:81
 msgctxt "gallery category slug"
 msgid "gallery"
 msgstr ""
 
-#: loop.php:41 loop.php:66 loop.php:114
+#: loop.php:56 loop.php:73 loop.php:115
 #, php-format
 msgid "Permalink to %s"
 msgstr ""
 
-#: loop.php:45 loop.php:96 loop.php:118
-#, php-format
-msgid ""
-"<span class=\"meta-prep meta-prep-author\">Posted on </span><a href=\"%1$s\" "
-"title=\"%2$s\" rel=\"bookmark\"><span class=\"entry-date\">%3$s</span></a> "
-"<span class=\"meta-sep\"> by </span> <span class=\"author vcard\"><a class="
-"\"url fn n\" href=\"%4$s\" title=\"%5$s\">%6$s</a></span>"
-msgstr ""
-
-#: loop.php:65
+#: loop.php:72
 #, php-format
 msgid "This gallery contains <a %1$s>%2$s photos</a>."
 msgstr ""
 
-#: loop.php:74
+#: loop.php:81
 msgid "View posts in the Gallery category"
 msgstr ""
 
-#: loop.php:74
+#: loop.php:81
 msgid "More Galleries"
 msgstr ""
 
-#: loop.php:76 loop.php:106 loop.php:144
+#: loop.php:83 loop.php:106 loop.php:148
 msgid "Leave a comment"
 msgstr ""
 
-#: loop.php:76 loop.php:106 loop.php:144
+#: loop.php:83 loop.php:106 loop.php:148
 msgid "1 Comment"
 msgstr ""
 
-#: loop.php:76 loop.php:106 loop.php:144
+#: loop.php:83 loop.php:106 loop.php:148
 msgid "% Comments"
 msgstr ""
 
-#: loop.php:82
+#: loop.php:90
 msgctxt "asides category slug"
 msgid "asides"
 msgstr ""
 
-#: loop.php:141
-msgid "Posted in "
+#: loop.php:135
+#, php-format
+msgid "Posted in %s"
 msgstr ""
 
-#: loop.php:143
-msgid "Tagged "
+#: loop.php:144
+#, php-format
+msgid "Tagged %s"
 msgstr ""
 
 #: search.php:17
@@ -388,41 +370,30 @@ msgid ""
 "different keywords."
 msgstr ""
 
-#: sidebar.php:19
+#: sidebar.php:27
 msgid "Archives"
 msgstr ""
 
-#: sidebar.php:26
+#: sidebar.php:34
 msgid "Meta"
 msgstr ""
 
-#: single.php:19 single.php:75
+#: single.php:19 single.php:59
 msgctxt "Previous post link"
 msgid "&larr;"
 msgstr ""
 
-#: single.php:20 single.php:76
+#: single.php:20 single.php:60
 msgctxt "Next post link"
 msgid "&rarr;"
 msgstr ""
 
-#: single.php:27
-msgid "Posted on "
+#: single.php:45
+#, php-format
+msgid "View all posts by %s &rarr;"
 msgstr ""
 
-#: single.php:29
-msgid " by "
-msgstr ""
-
-#: single.php:44
-msgid "About "
-msgstr ""
-
-#: single.php:47
-msgid "View all posts by "
-msgstr ""
-
-#: tag.php:19
+#: tag.php:17
 #, php-format
 msgid "Tag Archives: %s"
 msgstr ""

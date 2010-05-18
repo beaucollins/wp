@@ -554,7 +554,9 @@ class WP_Widget_Recent_Posts extends WP_Widget {
 		</ul>
 		<?php echo $after_widget; ?>
 <?php
-			wp_reset_query();  // Restore global post data stomped by the_post().
+		// Reset the global $the_post as this query will have stomped on it
+		wp_reset_postdata();
+
 		endif;
 
 		$cache[$args['widget_id']] = ob_get_flush();
@@ -587,7 +589,7 @@ class WP_Widget_Recent_Posts extends WP_Widget {
 		<input class="widefat" id="<?php echo $this->get_field_id('title'); ?>" name="<?php echo $this->get_field_name('title'); ?>" type="text" value="<?php echo $title; ?>" /></p>
 
 		<p><label for="<?php echo $this->get_field_id('number'); ?>"><?php _e('Number of posts to show:'); ?></label>
-		<input id="<?php echo $this->get_field_id('number'); ?>" name="<?php echo $this->get_field_name('number'); ?>" type="text" value="<?php echo $number; ?>" size="3" /><br />
+		<input id="<?php echo $this->get_field_id('number'); ?>" name="<?php echo $this->get_field_name('number'); ?>" type="text" value="<?php echo $number; ?>" size="3" /></p>
 <?php
 	}
 }
@@ -642,7 +644,7 @@ class WP_Widget_Recent_Comments extends WP_Widget {
  		else if ( $number < 1 )
  			$number = 1;
 
-		$comments = get_comments(array('number' => $number));
+		$comments = get_comments( array( 'number' => $number, 'status' => 'approve' ) );
 		$output .= $before_widget;
 		if ( $title ) 
 			$output .= $before_title . $title . $after_title;
@@ -682,7 +684,7 @@ class WP_Widget_Recent_Comments extends WP_Widget {
 		<input class="widefat" id="<?php echo $this->get_field_id('title'); ?>" name="<?php echo $this->get_field_name('title'); ?>" type="text" value="<?php echo $title; ?>" /></p>
 
 		<p><label for="<?php echo $this->get_field_id('number'); ?>"><?php _e('Number of comments to show:'); ?></label>
-		<input id="<?php echo $this->get_field_id('number'); ?>" name="<?php echo $this->get_field_name('number'); ?>" type="text" value="<?php echo $number; ?>" size="3" /><br />
+		<input id="<?php echo $this->get_field_id('number'); ?>" name="<?php echo $this->get_field_name('number'); ?>" type="text" value="<?php echo $number; ?>" size="3" /></p>
 <?php
 	}
 }
@@ -1001,7 +1003,7 @@ class WP_Widget_Tag_Cloud extends WP_Widget {
 				$title = __('Tags');
 			} else {
 				$tax = get_taxonomy($current_taxonomy);
-				$title = $tax->label;
+				$title = $tax->labels->name;
 			}
 		}
 		$title = apply_filters('widget_title', $title, $instance, $this->id_base);
@@ -1030,10 +1032,10 @@ class WP_Widget_Tag_Cloud extends WP_Widget {
 	<select class="widefat" id="<?php echo $this->get_field_id('taxonomy'); ?>" name="<?php echo $this->get_field_name('taxonomy'); ?>">
 	<?php foreach ( get_object_taxonomies('post') as $taxonomy ) :
 				$tax = get_taxonomy($taxonomy);
-				if ( !$tax->show_tagcloud || empty($tax->label) )
+				if ( !$tax->show_tagcloud || empty($tax->labels->name) )
 					continue;
 	?>
-		<option value="<?php echo esc_attr($taxonomy) ?>" <?php selected($taxonomy, $current_taxonomy) ?>><?php echo $tax->label ?></option>
+		<option value="<?php echo esc_attr($taxonomy) ?>" <?php selected($taxonomy, $current_taxonomy) ?>><?php echo $tax->labels->name; ?></option>
 	<?php endforeach; ?>
 	</select></p><?php
 	}
@@ -1067,7 +1069,7 @@ class WP_Widget_Tag_Cloud extends WP_Widget {
 
 		echo $args['before_widget'];
 
-		if ( isset($instance['title']) )
+		if ( !empty($instance['title']) )
 			echo $args['before_title'] . $instance['title'] . $args['after_title'];
 
 		wp_nav_menu( array( 'menu' => $nav_menu ) );

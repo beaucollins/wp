@@ -19,7 +19,7 @@ if ( !is_taxonomy($taxonomy) )
 
 $tax = get_taxonomy($taxonomy);
 
-$title = $tax->label;
+$title = $tax->labels->name;
 
 if ( empty($post_type) || !in_array( $post_type, get_post_types( array('public' => true) ) ) )
 	$post_type = 'post';
@@ -41,7 +41,7 @@ case 'add-tag':
 
 	check_admin_referer('add-tag');
 
-	if ( !current_user_can($tax->edit_cap) )
+	if ( !current_user_can($tax->cap->edit_terms) )
 		wp_die(__('Cheatin&#8217; uh?'));
 
 	$ret = wp_insert_term($_POST['tag-name'], $taxonomy, $_POST);
@@ -79,7 +79,7 @@ case 'delete':
 	$tag_ID = (int) $_GET['tag_ID'];
 	check_admin_referer('delete-tag_' .  $tag_ID);
 
-	if ( !current_user_can($tax->delete_cap) )
+	if ( !current_user_can($tax->cap->delete_terms) )
 		wp_die(__('Cheatin&#8217; uh?'));
 
 	wp_delete_term( $tag_ID, $taxonomy);
@@ -93,7 +93,7 @@ break;
 case 'bulk-delete':
 	check_admin_referer('bulk-tags');
 
-	if ( !current_user_can($tax->delete_cap) )
+	if ( !current_user_can($tax->cap->delete_terms) )
 		wp_die(__('Cheatin&#8217; uh?'));
 
 	$tags = (array) $_GET['delete_tags'];
@@ -116,7 +116,7 @@ case 'bulk-delete':
 break;
 
 case 'edit':
-	$title = sprintf(_x('Edit %s', '%s: singular taxonomy name'), $tax->singular_label);
+	$title = $tax->labels->edit_item;
 
 	require_once ('admin-header.php');
 	$tag_ID = (int) $_GET['tag_ID'];
@@ -130,7 +130,7 @@ case 'editedtag':
 	$tag_ID = (int) $_POST['tag_ID'];
 	check_admin_referer('update-tag_' . $tag_ID);
 
-	if ( !current_user_can($tax->edit_cap) )
+	if ( !current_user_can($tax->cap->edit_terms) )
 		wp_die(__('Cheatin&#8217; uh?'));
 
 	$ret = wp_update_term($tag_ID, $taxonomy, $_POST);
@@ -161,7 +161,7 @@ if ( ! empty($_GET['_wp_http_referer']) ) {
 }
 
 wp_enqueue_script('admin-tags');
-if ( current_user_can($tax->edit_cap) )
+if ( current_user_can($tax->cap->edit_terms) )
 	wp_enqueue_script('inline-edit-tax');
 
 require_once ('admin-header.php');
@@ -192,9 +192,9 @@ endif; ?>
 <input type="hidden" name="taxonomy" value="<?php echo esc_attr($taxonomy); ?>" />
 <input type="hidden" name="post_type" value="<?php echo esc_attr($post_type); ?>" />
 <p class="search-box">
-	<label class="screen-reader-text" for="tag-search-input"><?php printf(_x('Search %s', '%s: plural taxonomy name'), $tax->label); ?>:</label>
+	<label class="screen-reader-text" for="tag-search-input"><?php echo $tax->labels->search_items; ?>:</label>
 	<input type="text" id="tag-search-input" name="s" value="<?php _admin_search_query(); ?>" />
-	<input type="submit" value="<?php echo esc_attr( sprintf(_x('Search %s', '%s: plural taxonomy name'), $tax->label) ); ?>" class="button" />
+	<input type="submit" value="<?php echo esc_attr( $tax->labels->search_items );  ?>" class="button" />
 </p>
 </form>
 <br class="clear" />
@@ -318,7 +318,7 @@ do_action('after-' . $taxonomy . '-table', $taxonomy);
 <div class="col-wrap">
 
 <?php
-if ( current_user_can( $tax->edit_cap ) )
+if ( current_user_can( $tax->cap->edit_terms ) )
 	$tag_cloud = wp_tag_cloud( array( 'taxonomy' => $taxonomy, 'echo' => false, 'link' => 'edit' ) );
 else
 	$tag_cloud = wp_tag_cloud( array( 'taxonomy' => $taxonomy, 'echo' => false ) );
@@ -326,13 +326,13 @@ else
 if ( $tag_cloud ) :
 ?>
 <div class="tagcloud">
-<h3><?php printf(_x('Popular %s', '%s: plural taxonomy name'), $tax->label); ?></h3>
+<h3><?php echo $tax->labels->popular_items; ?></h3>
 <?php echo $tag_cloud; unset( $tag_cloud ); ?>
 </div>
 <?php
 endif;
 
-if ( current_user_can($tax->edit_cap) ) {
+if ( current_user_can($tax->cap->edit_terms) ) {
 	if ( 'category' == $taxonomy )
 		do_action('add_category_form_pre', (object)array('parent' => 0) );  // Back compat hook. Deprecated in preference to $taxonomy_pre_add_form
 	else
@@ -341,27 +341,27 @@ if ( current_user_can($tax->edit_cap) ) {
 ?>
 
 <div class="form-wrap">
-<h3><?php printf(_x('Add a New %s', '%s: singular taxonomy name'), $tax->singular_label); ?></h3>
+<h3><?php echo $tax->labels->add_new_item; ?></h3>
 <form id="addtag" method="post" action="edit-tags.php" class="validate">
 <input type="hidden" name="action" value="add-tag" />
 <input type="hidden" name="taxonomy" value="<?php echo esc_attr($taxonomy); ?>" />
 <?php wp_nonce_field('add-tag'); ?>
 
 <div class="form-field form-required">
-	<label for="tag-name"><?php echo _x('Name', 'Taxonomy Name'); ?></label>
+	<label for="tag-name"><?php _ex('Name', 'Taxonomy Name'); ?></label>
 	<input name="tag-name" id="tag-name" type="text" value="" size="40" aria-required="true" />
 	<p><?php _e('The name is how it appears on your site.'); ?></p>
 </div>
-<?php if ( !is_multisite() ) : ?>
+<?php if ( ! global_terms_enabled() ) : ?>
 <div class="form-field">
-	<label for="tag-slug"><?php echo _x('Slug', 'Taxonomy Slug'); ?></label>
+	<label for="tag-slug"><?php _ex('Slug', 'Taxonomy Slug'); ?></label>
 	<input name="slug" id="tag-slug" type="text" value="" size="40" />
 	<p><?php _e('The &#8220;slug&#8221; is the URL-friendly version of the name. It is usually all lowercase and contains only letters, numbers, and hyphens.'); ?></p>
 </div>
 <?php endif; // is_multisite() ?>
 <?php if ( is_taxonomy_hierarchical($taxonomy) ) : ?>
 <div class="form-field">
-	<label for="parent"><?php echo _x('Parent', 'Taxonomy Parent'); ?></label>
+	<label for="parent"><?php _ex('Parent', 'Taxonomy Parent'); ?></label>
 	<?php wp_dropdown_categories(array('hide_empty' => 0, 'hide_if_empty' => false, 'taxonomy' => $taxonomy, 'name' => 'parent', 'orderby' => 'name', 'hierarchical' => true, 'show_option_none' => __('None'))); ?>
 	<?php if ( 'category' == $taxonomy ) : // @todo: Generic text for hierarchical taxonomies ?>
 		<p><?php _e('Categories, unlike tags, can have a hierarchy. You might have a Jazz category, and under that have children categories for Bebop and Big Band. Totally optional.'); ?></p>
@@ -369,7 +369,7 @@ if ( current_user_can($tax->edit_cap) ) {
 </div>
 <?php endif; // is_taxonomy_hierarchical() ?>
 <div class="form-field">
-	<label for="tag-description"><?php echo _x('Description', 'Taxonomy Description'); ?></label>
+	<label for="tag-description"><?php _ex('Description', 'Taxonomy Description'); ?></label>
 	<textarea name="description" id="tag-description" rows="5" cols="40"></textarea>
 	<p><?php _e('The description is not prominent by default; however, some themes may show it.'); ?></p>
 </div>
@@ -379,7 +379,7 @@ if ( ! is_taxonomy_hierarchical($taxonomy) )
 	do_action('add_tag_form_fields', $taxonomy);
 do_action($taxonomy . '_add_form_fields', $taxonomy);
 ?>
-<p class="submit"><input type="submit" class="button" name="submit" id="submit" value="<?php echo esc_attr(sprintf(_x('Add %s', '%s: singular  taxonomy name'), $tax->singular_label)); ?>" /></p>
+<p class="submit"><input type="submit" class="button" name="submit" id="submit" value="<?php echo esc_attr( $tax->labels->add_new_item ); ?>" /></p>
 <?php
 if ( 'category' == $taxonomy )
 	do_action('edit_category_form',	(object)array('parent' => 0) );  // Back compat hook. Deprecated in preference to $taxonomy_add_form

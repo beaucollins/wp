@@ -14,7 +14,7 @@ function post_submit_meta_box($post) {
 
 	$post_type = $post->post_type;
 	$post_type_object = get_post_type_object($post_type);
-	$can_publish = current_user_can($post_type_object->publish_cap);
+	$can_publish = current_user_can($post_type_object->cap->publish_posts);
 ?>
 <div class="submitbox" id="submitpost">
 
@@ -249,14 +249,14 @@ function post_tags_meta_box($post, $box) {
 	$help_nojs  = isset( $taxonomy->help_nojs  ) ? $taxonomy->help_nojs         : __('Add or remove tags');
 	$help_cloud = isset( $taxonomy->help_cloud ) ? $taxonomy->help_cloud        : __('Choose from the most used tags in %s');
 
-	$disabled = !current_user_can($taxonomy->assign_cap) ? 'disabled="disabled"' : '';
+	$disabled = !current_user_can($taxonomy->cap->assign_terms) ? 'disabled="disabled"' : '';
 ?>
 <div class="tagsdiv" id="<?php echo $tax_name; ?>">
 	<div class="jaxtag">
 	<div class="nojs-tags hide-if-js">
 	<p><?php echo $help_nojs; ?></p>
 	<textarea name="<?php echo "tax_input[$tax_name]"; ?>" class="the-tags" id="tax-input[<?php echo $tax_name; ?>]" <?php echo $disabled; ?>><?php echo esc_attr(get_terms_to_edit( $post->ID, $tax_name )); ?></textarea></div>
- 	<?php if ( current_user_can($taxonomy->assign_cap) ) : ?>
+ 	<?php if ( current_user_can($taxonomy->cap->assign_terms) ) : ?>
 	<div class="ajaxtag hide-if-no-js">
 		<label class="screen-reader-text" for="new-tag-<?php echo $tax_name; ?>"><?php echo $box['title']; ?></label>
 		<div class="taghint"><?php echo $help_hint; ?></div>
@@ -268,7 +268,7 @@ function post_tags_meta_box($post, $box) {
 	</div>
 	<div class="tagchecklist"></div>
 </div>
-<?php if ( current_user_can($taxonomy->assign_cap) ) : ?>
+<?php if ( current_user_can($taxonomy->cap->assign_terms) ) : ?>
 <p class="hide-if-no-js"><a href="#titlediv" class="tagcloud-link" id="link-<?php echo $tax_name; ?>"><?php printf( $help_cloud, $box['title'] ); ?></a></p>
 <?php else : ?>
 <p><em><?php _e('You cannot modify this Taxonomy.'); ?></em></p>
@@ -296,7 +296,7 @@ function post_categories_meta_box( $post, $box ) {
 	?>
 	<div id="taxonomy-<?php echo $taxonomy; ?>" class="categorydiv">
 		<ul id="<?php echo $taxonomy; ?>-tabs" class="category-tabs">
-			<li class="tabs"><a href="#<?php echo $taxonomy; ?>-all" tabindex="3"><?php printf( __( 'All %s' ), $tax->label ); ?></a></li>
+			<li class="tabs"><a href="#<?php echo $taxonomy; ?>-all" tabindex="3"><?php echo $tax->labels->all_items; ?></a></li>
 			<li class="hide-if-no-js"><a href="#<?php echo $taxonomy; ?>-pop" tabindex="3"><?php _e( 'Most Used' ); ?></a></li>
 		</ul>
 
@@ -315,16 +315,27 @@ function post_categories_meta_box( $post, $box ) {
 				<?php wp_terms_checklist($post->ID, array( 'taxonomy' => $taxonomy, 'popular_cats' => $popular_ids ) ) ?>
 			</ul>
 		</div>
-	<?php if ( !current_user_can($tax->assign_cap) ) : ?>
+	<?php if ( !current_user_can($tax->cap->assign_terms) ) : ?>
 	<p><em><?php _e('You cannot modify this Taxonomy.'); ?></em></p>
 	<?php endif; ?>
-	<?php if ( current_user_can($tax->edit_cap) ) : ?>
+	<?php if ( current_user_can($tax->cap->edit_terms) ) : ?>
 			<div id="<?php echo $taxonomy; ?>-adder" class="wp-hidden-children">
-				<h4><a id="<?php echo $taxonomy; ?>-add-toggle" href="#<?php echo $taxonomy; ?>-add" class="hide-if-no-js" tabindex="3"><?php printf( __( '+ Add New %s' ), $tax->singular_label ); ?></a></h4>
+				<h4>
+					<a id="<?php echo $taxonomy; ?>-add-toggle" href="#<?php echo $taxonomy; ?>-add" class="hide-if-no-js" tabindex="3">
+						<?php
+							/* translators: %s: add new taxonomy label */
+							printf( __( '+ %s' ), $tax->labels->add_new_item );
+						?>
+					</a>
+				</h4>
 				<p id="<?php echo $taxonomy; ?>-add" class="category-add wp-hidden-child">
-					<label class="screen-reader-text" for="new<?php echo $taxonomy; ?>"><?php printf( __( 'Add New %s' ), $tax->singular_label ); ?></label><input type="text" name="new<?php echo $taxonomy; ?>" id="new<?php echo $taxonomy; ?>" class="form-required form-input-tip" value="<?php echo esc_attr( sprintf( 'New %s Name', $tax->singular_label ) ); ?>" tabindex="3" aria-required="true"/>
-					<label class="screen-reader-text" for="new<?php echo $taxonomy; ?>_parent"><?php printf( __('Parent %s'), $tax->singular_label ); ?>:</label><?php wp_dropdown_categories( array( 'taxonomy' => $taxonomy, 'hide_empty' => 0, 'name' => 'new'.$taxonomy.'_parent', 'orderby' => 'name', 'hierarchical' => 1, 'show_option_none' => sprintf( __('&mdash; Parent %s &mdash;'), $tax->singular_label ), 'tab_index' => 3 ) ); ?>
-					<input type="button" id="<?php echo $taxonomy; ?>-add-submit" class="add:<?php echo $taxonomy ?>checklist:<?php echo $taxonomy ?>-add button category-add-sumbit" value="<?php esc_attr_e( 'Add' ); ?>" tabindex="3" />
+					<label class="screen-reader-text" for="new<?php echo $taxonomy; ?>"><?php echo $tax->labels->add_new_item; ?></label>
+					<input type="text" name="new<?php echo $taxonomy; ?>" id="new<?php echo $taxonomy; ?>" class="form-required form-input-tip" value="<?php echo esc_attr( $tax->labels->new_item_name ); ?>" tabindex="3" aria-required="true"/>
+					<label class="screen-reader-text" for="new<?php echo $taxonomy; ?>_parent">
+						<?php echo $tax->labels->parent_item_colon; ?>
+					</label>
+					<?php wp_dropdown_categories( array( 'taxonomy' => $taxonomy, 'hide_empty' => 0, 'name' => 'new'.$taxonomy.'_parent', 'orderby' => 'name', 'hierarchical' => 1, 'show_option_none' => '&mdash; ' . $tax->labels->parent_item . ' &mdash;', 'tab_index' => 3 ) ); ?>
+					<input type="button" id="<?php echo $taxonomy; ?>-add-submit" class="add:<?php echo $taxonomy ?>checklist:<?php echo $taxonomy ?>-add button category-add-sumbit" value="<?php echo esc_attr( $tax->labels->add_new_item ); ?>" tabindex="3" />
 					<?php wp_nonce_field( 'add-'.$taxonomy, '_ajax_nonce', false ); ?>
 					<span id="<?php echo $taxonomy; ?>-ajax-response"></span>
 				</p>
@@ -533,7 +544,7 @@ function page_attributes_meta_box($post) {
 <?php
 		} // end empty pages check
 	} // end hierarchical check.
-	if ( 0 != count( get_page_templates() ) ) {
+	if ( 'page' == $post->post_type && 0 != count( get_page_templates() ) ) {
 		$template = !empty($post->page_template) ? $post->page_template : false;
 		?>
 <h5><?php _e('Template') ?></h5>

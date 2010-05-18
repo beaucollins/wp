@@ -59,7 +59,7 @@ class Walker_Nav_Menu_Edit extends Walker_Nav_Menu  {
 			$original_title = $original_object->post_title;
 		}
 		?>
-		<li id="menu-item-<?php echo $item_id; ?>" class="menu-item menu-item-depth-<?php echo $depth; ?> menu-item-<?php echo strtolower(esc_attr( $item->append )); ?>">
+		<li id="menu-item-<?php echo $item_id; ?>" class="menu-item menu-item-depth-<?php echo $depth; ?> menu-item-<?php echo esc_attr( $item->object ); ?>">
 			<dl class="menu-item-bar <?php
 				if ( isset($_GET['edit-menu-item']) && $item_id == $_GET['edit-menu-item'] )
 					echo 'menu-item-edit-active';
@@ -69,7 +69,7 @@ class Walker_Nav_Menu_Edit extends Walker_Nav_Menu  {
 				<dt class="menu-item-handle">
 					<span class="item-title"><?php echo esc_html( $item->title ); ?></span>
 					<span class="item-controls">
-						<span class="item-type"><?php echo esc_html( $item->append ); ?></span>
+						<span class="item-type"><?php echo esc_html( $item->type_label ); ?></span>
 						<span class="item-order">
 							<a href="<?php
 								echo wp_nonce_url(
@@ -161,10 +161,8 @@ class Walker_Nav_Menu_Edit extends Walker_Nav_Menu  {
 
 				<div class="menu-item-actions description-wide submitbox">
 					<?php if( 'custom' != $item->type ) : ?>
-						<p class="link-to-original"><?php
-							_e('Original ');
-							echo esc_html( $item->append );
-							echo ":"; ?>
+						<p class="link-to-original">
+							<?php _e('Original:'); ?>
 							<a href="<?php echo esc_attr( $item->url ); ?>">
 								<?php echo esc_html($original_title); ?>
 							</a>
@@ -184,7 +182,6 @@ class Walker_Nav_Menu_Edit extends Walker_Nav_Menu  {
 					<input class="button-primary save-menu-item" name="save_menu_item" type="submit" value="<?php esc_attr_e('Save Menu Item'); ?>" />
 				</div>
 
-				<input class="menu-item-data-append" type="hidden" name="menu-item-append[<?php echo $item_id; ?>]" value="<?php echo $item->append; ?>" />
 				<input class="menu-item-data-db-id" type="hidden" name="menu-item-db-id[<?php echo $item_id; ?>]" value="<?php echo $item_id; ?>" />
 				<input class="menu-item-data-object-id" type="hidden" name="menu-item-object-id[<?php echo $item_id; ?>]" value="<?php echo esc_attr( $item->object_id ); ?>" />
 				<input class="menu-item-data-object" type="hidden" name="menu-item-object[<?php echo $item_id; ?>]" value="<?php echo esc_attr( $item->object ); ?>" />
@@ -311,14 +308,14 @@ function _wp_ajax_menu_quick_search( $request = array() ) {
  **/
 function wp_nav_menu_setup() {
 	// Register meta boxes
+	if ( get_registered_nav_menus() && wp_get_nav_menus() )
+		add_meta_box( 'nav-menu-theme-locations', __( 'Theme Locations' ), 'wp_nav_menu_locations_meta_box' , 'nav-menus', 'side', 'default' );
 	add_meta_box( 'add-custom-links', __('Custom Links'), 'wp_nav_menu_item_link_meta_box', 'nav-menus', 'side', 'default' );
 	wp_nav_menu_post_type_meta_boxes();
 	wp_nav_menu_taxonomy_meta_boxes();
 
 	// Register advanced menu items (columns)
 	add_filter( 'manage_nav-menus_columns', 'wp_nav_menu_manage_columns');
-
-	add_filter( 'columns_prefs_header', create_function( '', "return __('Show advanced menu properties');" ));
 
 	// If first time editing, disable advanced items by default.
 	if( false === get_user_option( 'managenav-menuscolumnshidden' ) ) {
@@ -337,10 +334,10 @@ function wp_nav_menu_setup() {
 function wp_initial_nav_menu_meta_boxes() {
 	global $wp_meta_boxes;
 
-	if ( get_user_option( 'metaboxhidden_nav-menus' ) || ! is_array($wp_meta_boxes) )
+	if ( get_user_option( 'metaboxhidden_nav-menus' ) !== false || ! is_array($wp_meta_boxes) )
 		return;
 
-	$initial_meta_boxes = array( 'manage-menu', 'create-menu', 'add-custom-links', 'add-page', 'add-category' );
+	$initial_meta_boxes = array( 'nav-menu-theme-locations', 'add-custom-links', 'add-page', 'add-category' );
 	$hidden_meta_boxes = array();
 
 	foreach ( array_keys($wp_meta_boxes['nav-menus']) as $context ) {
@@ -365,7 +362,7 @@ function wp_initial_nav_menu_meta_boxes() {
  * @since 3.0.0
  */
 function wp_nav_menu_post_type_meta_boxes() {
-	$post_types = get_post_types( array( 'public' => true ), 'object' );
+	$post_types = get_post_types( array( 'show_in_nav_menus' => true ), 'object' );
 
 	if ( ! $post_types )
 		return;
@@ -374,7 +371,7 @@ function wp_nav_menu_post_type_meta_boxes() {
 		$post_type = apply_filters( 'nav_menu_meta_box_object', $post_type );
 		if ( $post_type ) {
 			$id = $post_type->name;
-			add_meta_box( "add-{$id}", $post_type->label, 'wp_nav_menu_item_post_type_meta_box', 'nav-menus', 'side', 'default', $post_type );
+			add_meta_box( "add-{$id}", $post_type->labels->name, 'wp_nav_menu_item_post_type_meta_box', 'nav-menus', 'side', 'default', $post_type );
 		}
 	}
 }
@@ -394,9 +391,47 @@ function wp_nav_menu_taxonomy_meta_boxes() {
 		$tax = apply_filters( 'nav_menu_meta_box_object', $tax );
 		if ( $tax ) {
 			$id = $tax->name;
-			add_meta_box( "add-{$id}", $tax->label, 'wp_nav_menu_item_taxonomy_meta_box', 'nav-menus', 'side', 'default', $tax );
+			add_meta_box( "add-{$id}", $tax->labels->name, 'wp_nav_menu_item_taxonomy_meta_box', 'nav-menus', 'side', 'default', $tax );
 		}
 	}
+}
+
+/**
+ * Displays a metabox for the nav menu theme locations.
+ *
+ * @since 3.0.0
+ */
+function wp_nav_menu_locations_meta_box() {
+	$locations = get_registered_nav_menus();
+	$mods = get_nav_menu_locations();
+	$menus = wp_get_nav_menus();
+	$menu_locations = get_nav_menu_locations();
+
+	foreach ( $locations as $location => $description ) {
+		?>
+		<p>
+			<label class="howto" for="locations-<?php echo $location; ?>">
+				<span><?php echo $description; ?></span>
+				<select name="menu-locations[<?php echo $location; ?>]" id="locations-<?php echo $location; ?>">
+					<option value=""></option>
+					<?php foreach ( $menus as $menu ) : ?>
+					<option<?php selected( isset( $menu_locations[ $location ] ) && $menu_locations[ $location ] == $menu->term_id ); ?>
+						value="<?php echo $menu->term_id; ?>"><?php
+						$truncated_name = wp_html_excerpt( $menu->name, 40 );
+						echo $truncated_name == $menu->name ? $menu->name : trim( $truncated_name ) . '&hellip;';
+					?></option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+		</p>
+	<?php
+	}
+	?>
+	<p class="button-controls">
+		<img class="waiting" src="<?php echo esc_url( admin_url( 'images/wpspin_light.gif' ) ); ?>" alt="" />
+		<input type="submit" class="button-primary" name="nav-menu-locations" value="<?php esc_attr_e( 'Save' ); ?>" />
+	</p>
+	<?php
 }
 
 /**
@@ -484,6 +519,8 @@ function wp_nav_menu_item_post_type_meta_box( $object, $post_type ) {
 		'posts_per_page' => $per_page,
 		'post_type' => $post_type_name,
 		'suppress_filters' => true,
+		'update_post_term_cache' => false,
+		'update_post_meta_cache' => false
 	);
 
 	if ( isset( $post_type['args']->_default_query ) )
@@ -492,8 +529,7 @@ function wp_nav_menu_item_post_type_meta_box( $object, $post_type ) {
 	// @todo transient caching of these results with proper invalidation on updating of a post of this type
 	$get_posts = new WP_Query;
 	$posts = $get_posts->query( $args );
-	$count_posts = (int) @count( $posts );
-	if ( ! $count_posts ) {
+	if ( ! $get_posts->post_count ) {
 		echo '<p>' . __( 'No items.' ) . '</p>';
 		return;
 	}
@@ -502,7 +538,7 @@ function wp_nav_menu_item_post_type_meta_box( $object, $post_type ) {
 
 	$num_pages = $get_posts->max_num_pages;
 
-	if ( isset( $get_posts->found_posts ) && ( $get_posts->found_posts > $count_posts ) ) {
+	if ( isset( $get_posts->found_posts ) && ( $get_posts->found_posts > $get_posts->post_count ) ) {
 		// somewhat like display_page_row(), let's make sure ancestors show up on paged display
 		$parent_ids = array();
 		$child_ids = array();
@@ -543,7 +579,7 @@ function wp_nav_menu_item_post_type_meta_box( $object, $post_type ) {
 	));
 
 	if ( !$posts )
-		$error = '<li id="error">'. sprintf( __( 'No %s exists' ), $post_type['args']->label ) .'</li>';
+		$error = '<li id="error">'. $post_type['args']->labels->not_found .'</li>';
 
 	$current_tab = 'all';
 	if ( isset( $_REQUEST[$post_type_name . '-tab'] ) && in_array( $_REQUEST[$post_type_name . '-tab'], array('all', 'search') ) ) {
@@ -583,8 +619,9 @@ function wp_nav_menu_item_post_type_meta_box( $object, $post_type ) {
 			}
 			?>
 			<p class="quick-search-wrap">
-				<input type="text" class="quick-search regular-text" value="<?php echo $searched; ?>" name="quick-search-posttype-<?php echo $post_type_name; ?>" />
-				<input type="submit" class="quick-search-submit button-secondary" value="<?php esc_attr_e('Search'); ?>" />
+				<input type="text" class="quick-search regular-text input-with-default-title" title="<?php esc_attr_e('Search'); ?>" value="<?php echo $searched; ?>" name="quick-search-posttype-<?php echo $post_type_name; ?>" />
+				<img class="waiting" src="<?php echo esc_url( admin_url( 'images/wpspin_light.gif' ) ); ?>" alt="" />
+				<input type="submit" class="quick-search-submit button-secondary hide-if-js" value="<?php esc_attr_e('Search'); ?>" />
 			</p>
 
 			<ul id="<?php echo $post_type_name; ?>-search-checklist" class="list:<?php echo $post_type_name?> categorychecklist form-no-clear">
@@ -660,10 +697,7 @@ function wp_nav_menu_item_post_type_meta_box( $object, $post_type ) {
  */
 function wp_nav_menu_item_taxonomy_meta_box( $object, $taxonomy ) {
 	$taxonomy_name = $taxonomy['args']->name;
-	if ( ! $term_count = wp_count_terms( $taxonomy_name ) ) {
-		echo '<p>' . __( 'No items.' ) . '</p>';
-		return;
-	}
+	
 	// paginate browsing for large numbers of objects
 	$per_page = 50;
 	$pagenum = isset( $_REQUEST[$taxonomy_name . '-tab'] ) && isset( $_REQUEST['paged'] ) ? absint( $_REQUEST['paged'] ) : 1;
@@ -683,7 +717,14 @@ function wp_nav_menu_item_taxonomy_meta_box( $object, $taxonomy ) {
 		'pad_counts' => false,
 	);
 
-	$num_pages = ceil( $term_count / $per_page );
+	$terms = get_terms( $taxonomy_name, $args );
+
+	if ( ! $terms || is_wp_error($terms) ) {
+		echo '<p>' . __( 'No items.' ) . '</p>';
+		return;
+	}
+
+	$num_pages = ceil( count($terms) / $per_page );
 
 	$page_links = paginate_links( array(
 		'base' => add_query_arg(
@@ -700,11 +741,6 @@ function wp_nav_menu_item_taxonomy_meta_box( $object, $taxonomy ) {
 	));
 
 	$walker = new Walker_Nav_Menu_Checklist;
-	// @todo transient caching of these results with proper invalidation on updating of a tax of this type
-	$terms = get_terms( $taxonomy_name, $args );
-
-	if ( ! $terms || is_wp_error($terms) )
-		$error = '<li id="error">'. sprintf( __( 'No %s exists' ), $taxonomy['args']->label ) .'</li>';
 
 	$current_tab = 'most-used';
 	if ( isset( $_REQUEST[$taxonomy_name . '-tab'] ) && in_array( $_REQUEST[$taxonomy_name . '-tab'], array('all', 'most-used', 'search') ) ) {
@@ -759,8 +795,9 @@ function wp_nav_menu_item_taxonomy_meta_box( $object, $taxonomy ) {
 			}
 			?>
 			<p class="quick-search-wrap">
-				<input type="text" class="quick-search regular-text" value="<?php echo $searched; ?>" name="quick-search-taxonomy-<?php echo $taxonomy_name; ?>" />
-				<input type="submit" class="quick-search-submit button-secondary" value="<?php esc_attr_e('Search'); ?>" />
+				<input type="text" class="quick-search regular-text input-with-default-title" title="<?php esc_attr_e('Search'); ?>" value="<?php echo $searched; ?>" name="quick-search-taxonomy-<?php echo $taxonomy_name; ?>" />
+				<img class="waiting" src="<?php echo esc_url( admin_url( 'images/wpspin_light.gif' ) ); ?>" alt="" />
+				<input type="submit" class="quick-search-submit button-secondary hide-if-js" value="<?php esc_attr_e('Search'); ?>" />
 			</p>
 
 			<ul id="<?php echo $taxonomy_name; ?>-search-checklist" class="list:<?php echo $taxonomy_name?> categorychecklist form-no-clear">
@@ -865,7 +902,6 @@ function wp_save_nav_menu_item( $menu_id = 0, $menu_data = array() ) {
 				'menu-item-parent-id' => ( isset( $_item_object_data['menu-item-parent-id'] ) ? $_item_object_data['menu-item-parent-id'] : '' ),
 				'menu-item-position' => ( isset( $_item_object_data['menu-item-position'] ) ? $_item_object_data['menu-item-position'] : '' ),
 				'menu-item-type' => ( isset( $_item_object_data['menu-item-type'] ) ? $_item_object_data['menu-item-type'] : '' ),
-				'menu-item-append' => ( isset( $_item_object_data['menu-item-append'] ) ? $_item_object_data['menu-item-append'] : '' ),
 				'menu-item-title' => ( isset( $_item_object_data['menu-item-title'] ) ? $_item_object_data['menu-item-title'] : '' ),
 				'menu-item-url' => ( isset( $_item_object_data['menu-item-url'] ) ? $_item_object_data['menu-item-url'] : '' ),
 				'menu-item-description' => ( isset( $_item_object_data['menu-item-description'] ) ? $_item_object_data['menu-item-description'] : '' ),
@@ -918,6 +954,12 @@ function _wp_nav_menu_meta_box_object( $object = null ) {
 				'orderby' => 'id',
 				'order' => 'DESC',
 			);
+
+		// custom post types should show only published items
+		} else {
+			$object->_default_query = array(
+				'post_status' => 'publish',
+			);
 		}
 	}
 
@@ -925,21 +967,26 @@ function _wp_nav_menu_meta_box_object( $object = null ) {
 }
 
 /**
- * Returns the menu item formatted to edit.
+ * Returns the menu formatted to edit.
  *
  * @since 3.0.0
  *
- * @param string $menu_item_id The ID of the menu item to format.
+ * @param string $menu_id The ID of the menu to format.
  * @return string|WP_Error $output The menu formatted to edit or error object on failure.
  */
-function wp_get_nav_menu_to_edit( $menu_item_id = 0 ) {
-	$menu = wp_get_nav_menu_object( $menu_item_id );
+function wp_get_nav_menu_to_edit( $menu_id = 0 ) {
+	$menu = wp_get_nav_menu_object( $menu_id );
 
 	// If the menu exists, get its items.
 	if ( is_nav_menu( $menu ) ) {
 		$menu_items = wp_get_nav_menu_items( $menu->term_id, array('post_status' => 'any') );
 
-		$walker = new Walker_Nav_Menu_Edit;
+		$walker_class_name = apply_filters( 'wp_edit_nav_menu_walker', 'Walker_Nav_Menu_Edit', $menu_id );
+
+		if ( class_exists( $walker_class_name ) )
+			$walker = new $walker_class_name;
+		else
+			return new WP_Error( 'menu_walker_not_exist', sprintf( __('The Walker class named <strong>%s</strong> does not exist.'), $walker_class_name ) );
 
 		return walk_nav_menu_tree( array_map('wp_setup_nav_menu_item', $menu_items), 0, (object) array('walker' => $walker ) );
 	} elseif ( is_wp_error( $menu ) ) {
@@ -959,6 +1006,7 @@ function wp_get_nav_menu_to_edit( $menu_item_id = 0 ) {
  */
 function wp_nav_menu_manage_columns() {
 	return array(
+		'_title' => __('Show advanced menu properties'),
 		'cb' => '<input type="checkbox" />',
 		'link-target' => __('Link Target'),
 		'css-classes' => __('CSS Classes'),

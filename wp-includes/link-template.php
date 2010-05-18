@@ -568,31 +568,64 @@ function get_author_feed_link( $author_id, $feed = '' ) {
  * @return string Link to the feed for the category specified by $cat_id.
 */
 function get_category_feed_link($cat_id, $feed = '') {
-	$cat_id = (int) $cat_id;
+	return get_term_feed_link($cat_id, 'category', $feed);
+}
 
-	$category = get_category($cat_id);
+/**
+ * Retrieve the feed link for a taxonomy.
+ *
+ * Returns a link to the feed for all post in a given term. A specific feed
+ * can be requested or left blank to get the default feed.
+ *
+ * @since 3.0
+ *
+ * @param int $term_id ID of a category.
+ * @param string $taxonomy Optional. Taxonomy of $term_id
+ * @param string $feed Optional. Feed type.
+ * @return string Link to the feed for the taxonomy specified by $term_id and $taxonomy.
+*/
+function get_term_feed_link( $term_id, $taxonomy = 'category', $feed = '' ) {
+	global $wp_rewrite;
+	
+	$term_id = ( int ) $term_id;
 
-	if ( empty($category) || is_wp_error($category) )
+	$term = get_term( $term_id, $taxonomy  );
+	
+	if ( empty( $term ) || is_wp_error( $term ) )
 		return false;
 
-	if ( empty($feed) )
+	if ( empty( $feed ) )
 		$feed = get_default_feed();
 
-	$permalink_structure = get_option('permalink_structure');
+	$permalink_structure = get_option( 'permalink_structure' );
 
 	if ( '' == $permalink_structure ) {
-		$link = home_url("?feed=$feed&amp;cat=" . $cat_id);
+		if ( 'category' == $taxonomy ) {
+			$link = home_url("?feed=$feed&amp;cat=$term_id"); 
+		}
+		elseif ( 'post_tag' == $taxonomy ) {
+			$link = home_url("?feed=$feed&amp;tag=$term->slug"); 
+		} else {
+			$t = get_taxonomy( $taxonomy );
+			$link = home_url("?feed=$feed&amp;$t->query_var=$term->slug");
+		}
 	} else {
-		$link = get_category_link($cat_id);
-		if( $feed == get_default_feed() )
+		$link = get_term_link( $term_id, $term->taxonomy );
+		if ( $feed == get_default_feed() )
 			$feed_link = 'feed';
 		else
 			$feed_link = "feed/$feed";
 
-		$link = trailingslashit($link) . user_trailingslashit($feed_link, 'feed');
+		$link = trailingslashit( $link ) . user_trailingslashit( $feed_link, 'feed' );
 	}
 
-	$link = apply_filters('category_feed_link', $link, $feed);
+	if ( 'category' == $taxonomy )
+		$link = apply_filters( 'category_feed_link', $link, $feed );
+	elseif ( 'post_tag' == $taxonomy )
+		$link = apply_filters( 'category_feed_link', $link, $feed );
+	else
+		$link = apply_filters( 'taxonomy_feed_link', $link, $feed, $taxonomy );
+	
 
 	return $link;
 }
@@ -607,32 +640,7 @@ function get_category_feed_link($cat_id, $feed = '') {
  * @return string
  */
 function get_tag_feed_link($tag_id, $feed = '') {
-	$tag_id = (int) $tag_id;
-
-	$tag = get_tag($tag_id);
-
-	if ( empty($tag) || is_wp_error($tag) )
-		return false;
-
-	$permalink_structure = get_option('permalink_structure');
-
-	if ( empty($feed) )
-		$feed = get_default_feed();
-
-	if ( '' == $permalink_structure ) {
-		$link = home_url("?feed=$feed&amp;tag=" . $tag->slug);
-	} else {
-		$link = get_tag_link($tag->term_id);
-		if ( $feed == get_default_feed() )
-			$feed_link = 'feed';
-		else
-			$feed_link = "feed/$feed";
-		$link = trailingslashit($link) . user_trailingslashit($feed_link, 'feed');
-	}
-
-	$link = apply_filters('tag_feed_link', $link, $feed);
-
-	return $link;
+	return get_term_feed_link($tag_id, 'post_tag', $feed);
 }
 
 /**
@@ -646,7 +654,7 @@ function get_tag_feed_link($tag_id, $feed = '') {
 function get_edit_tag_link( $tag_id = 0, $taxonomy = 'post_tag' ) {
 	global $post_type;
 	$tax = get_taxonomy($taxonomy);
-	if ( !current_user_can($tax->edit_cap) )
+	if ( !current_user_can($tax->cap->edit_terms) )
 		return;
 
 	$tag = get_term($tag_id, $taxonomy);
@@ -668,7 +676,7 @@ function get_edit_tag_link( $tag_id = 0, $taxonomy = 'post_tag' ) {
  */
 function edit_tag_link( $link = '', $before = '', $after = '', $tag = null ) {
 	$tax = get_taxonomy('post_tag');
-	if ( !current_user_can($tax->edit_cap) )
+	if ( !current_user_can($tax->cap->edit_terms) )
 		return;
 
 	$tag = get_term($tag, 'post_tag');
@@ -793,7 +801,7 @@ function get_edit_post_link( $id = 0, $context = 'display' ) {
 	if ( !$post_type_object )
 		return;
 
-	if ( !current_user_can( $post_type_object->edit_cap, $post->ID ) )
+	if ( !current_user_can( $post_type_object->cap->edit_post, $post->ID ) )
 		return;
 
 	return apply_filters( 'get_edit_post_link', admin_url( sprintf($post_type_object->_edit_link . $action, $post->ID) ), $post->ID, $context );
@@ -846,7 +854,7 @@ function get_delete_post_link( $id = 0, $deprecated = '', $force_delete = false 
 	if ( !$post_type_object )
 		return;
 
-	if ( !current_user_can( $post_type_object->delete_cap, $post->ID ) )
+	if ( !current_user_can( $post_type_object->cap->delete_post, $post->ID ) )
 		return;
 
 	$action = ( $force_delete || !EMPTY_TRASH_DAYS ) ? 'delete' : 'trash';
@@ -1072,7 +1080,7 @@ function get_adjacent_post_rel_link($title = '%title', $in_same_cat = false, $ex
 
 	$title = str_replace('%title', $post->post_title, $title);
 	$title = str_replace('%date', $date, $title);
-	$title = apply_filters('the_title', $title, $post);
+	$title = apply_filters('the_title', $title, $post->ID);
 
 	$link = $previous ? "<link rel='prev' title='" : "<link rel='next' title='";
 	$link .= esc_attr( $title );
@@ -1210,7 +1218,7 @@ function get_boundary_post_rel_link($title = '%title', $in_same_cat = false, $ex
 
 	$title = str_replace('%title', $post->post_title, $title);
 	$title = str_replace('%date', $date, $title);
-	$title = apply_filters('the_title', $title, $post);
+	$title = apply_filters('the_title', $title, $post->ID);
 
 	$link = $start ? "<link rel='start' title='" : "<link rel='end' title='";
 	$link .= esc_attr($title);
@@ -1273,7 +1281,7 @@ function get_parent_post_rel_link($title = '%title') {
 
 	$title = str_replace('%title', $post->post_title, $title);
 	$title = str_replace('%date', $date, $title);
-	$title = apply_filters('the_title', $title, $post);
+	$title = apply_filters('the_title', $title, $post->ID);
 
 	$link = "<link rel='up' title='";
 	$link .= esc_attr( $title );
@@ -1346,7 +1354,7 @@ function adjacent_post_link($format, $link, $in_same_cat = false, $excluded_cate
 	if ( empty($post->post_title) )
 		$title = $previous ? __('Previous Post') : __('Next Post');
 
-	$title = apply_filters('the_title', $title, $post);
+	$title = apply_filters('the_title', $title, $post->ID);
 	$date = mysql2date(get_option('date_format'), $post->post_date);
 	$rel = $previous ? 'prev' : 'next';
 
@@ -1846,13 +1854,13 @@ function home_url( $path = '', $scheme = null ) {
 function get_home_url( $blog_id = null, $path = '', $scheme = null ) {
 	$orig_scheme = $scheme;
 
-	if ( !in_array($scheme, array('http', 'https')) )
+	if ( !in_array( $scheme, array( 'http', 'https' ) ) )
 		$scheme = is_ssl() && !is_admin() ? 'https' : 'http';
 
-	if ( empty($blog_id) || !is_multisite() )
-		$home = get_option('home');
+	if ( empty( $blog_id ) || !is_multisite() )
+		$home = get_option( 'home' );
 	else
-		$home = untrailingslashit(get_blogaddress_by_id($blog_id));
+		$home = get_blog_option( $blog_id, 'home' );
 
 	$url = str_replace( 'http://', "$scheme://", $home );
 
@@ -1900,28 +1908,28 @@ function site_url( $path = '', $scheme = null ) {
 function get_site_url( $blog_id = null, $path = '', $scheme = null ) {
 	// should the list of allowed schemes be maintained elsewhere?
 	$orig_scheme = $scheme;
-	if ( !in_array($scheme, array('http', 'https')) ) {
+	if ( !in_array( $scheme, array( 'http', 'https' ) ) ) {
 		if ( ( 'login_post' == $scheme || 'rpc' == $scheme ) && ( force_ssl_login() || force_ssl_admin() ) )
 			$scheme = 'https';
-		elseif ( ('login' == $scheme) && ( force_ssl_admin() ) )
+		elseif ( ( 'login' == $scheme ) && force_ssl_admin() )
 			$scheme = 'https';
-		elseif ( ('admin' == $scheme) && force_ssl_admin() )
+		elseif ( ( 'admin' == $scheme ) && force_ssl_admin() )
 			$scheme = 'https';
 		else
 			$scheme = ( is_ssl() ? 'https' : 'http' );
 	}
 
-	if ( empty($blog_id) || !is_multisite() )
-		$url = get_option('siteurl');
+	if ( empty( $blog_id ) || !is_multisite() )
+		$url = get_option( 'siteurl' );
 	else
-		$url = untrailingslashit(get_blogaddress_by_id($blog_id));
+		$url = get_blog_option( $blog_id, 'siteurl' );
 
 	$url = str_replace( 'http://', "{$scheme}://", $url );
 
-	if ( !empty($path) && is_string($path) && strpos($path, '..') === false )
-		$url .= '/' . ltrim($path, '/');
+	if ( !empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
+		$url .= '/' . ltrim( $path, '/' );
 
-	return apply_filters('site_url', $url, $path, $orig_scheme, $blog_id);
+	return apply_filters( 'site_url', $url, $path, $orig_scheme, $blog_id );
 }
 
 /**

@@ -249,8 +249,8 @@ function get_editable_user_ids( $user_id, $exclude_zeros = true, $post_type = 'p
 	$user = new WP_User( $user_id );
 	$post_type_obj = get_post_type_object($post_type);
 
-	if ( ! $user->has_cap($post_type_obj->edit_others_cap) ) {
-		if ( $user->has_cap($post_type_obj->edit_type_cap) || ! $exclude_zeros )
+	if ( ! $user->has_cap($post_type_obj->cap->edit_others_posts) ) {
+		if ( $user->has_cap($post_type_obj->cap->edit_posts) || ! $exclude_zeros )
 			return array($user->id);
 		else
 			return array();
@@ -834,14 +834,13 @@ function default_password_nag_handler($errors = false) {
 
 add_action('profile_update', 'default_password_nag_edit_user', 10, 2);
 function default_password_nag_edit_user($user_ID, $old_data) {
-	global $user_ID;
-	if ( ! get_user_option('default_password_nag') ) //Short circuit it.
+	if ( ! get_user_option('default_password_nag', $user_ID) ) //Short circuit it.
 		return;
 
 	$new_data = get_userdata($user_ID);
 
 	if ( $new_data->user_pass != $old_data->user_pass ) { //Remove the nag if the password has been changed.
-		delete_user_setting('default_password_nag');
+		delete_user_setting('default_password_nag', $user_ID);
 		update_user_option($user_ID, 'default_password_nag', false, true);
 	}
 }

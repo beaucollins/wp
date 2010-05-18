@@ -130,8 +130,8 @@ if ( isset( $_GET['updated'] ) && $_GET['updated'] == 'true' && ! empty( $_GET['
 				<select name="action">
 					<option value="-1" selected="selected"><?php _e( 'Bulk Actions' ); ?></option>
 					<option value="delete"><?php _e( 'Delete' ); ?></option>
-					<option value="spam"><?php echo _x( 'Mark as Spam', 'user' ); ?></option>
-					<option value="notspam"><?php echo _x( 'Not Spam', 'user' ); ?></option>
+					<option value="spam"><?php _ex( 'Mark as Spam', 'user' ); ?></option>
+					<option value="notspam"><?php _ex( 'Not Spam', 'user' ); ?></option>
 				</select>
 				<input type="submit" value="<?php esc_attr_e( 'Apply' ); ?>" name="doaction" id="doaction" class="button-secondary action" />
 				<?php wp_nonce_field( 'bulk-ms-users' ); ?>
@@ -170,7 +170,7 @@ if ( isset( $_GET['updated'] ) && $_GET['updated'] == 'true' && ! empty( $_GET['
 		<table class="widefat">
 			<thead>
 			<tr>
-				<th class="manage-column column-cb check-column" id="cb" scope="col">
+				<th class="manage-column column-cb check-column" scope="col">
 					<input type="checkbox" />
 				</th>
 				<?php
@@ -190,7 +190,7 @@ if ( isset( $_GET['updated'] ) && $_GET['updated'] == 'true' && ! empty( $_GET['
 			</thead>
 			<tfoot>
 			<tr>
-				<th class="manage-column column-cb check-column" id="cb" scope="col">
+				<th class="manage-column column-cb check-column" scope="col">
 					<input type="checkbox" />
 				</th>
 				<?php echo $col_url; ?>
@@ -324,8 +324,8 @@ if ( isset( $_GET['updated'] ) && $_GET['updated'] == 'true' && ! empty( $_GET['
 				<select name="action2">
 					<option value="-1" selected="selected"><?php _e( 'Bulk Actions' ); ?></option>
 					<option value="delete"><?php _e( 'Delete' ); ?></option>
-					<option value="spam"><?php echo _x( 'Mark as Spam', 'user' ); ?></option>
-					<option value="notspam"><?php echo _x( 'Not Spam', 'user' ); ?></option>
+					<option value="spam"><?php _ex( 'Mark as Spam', 'user' ); ?></option>
+					<option value="notspam"><?php _ex( 'Not Spam', 'user' ); ?></option>
 				</select>
 				<input type="submit" value="<?php esc_attr_e( 'Apply' ); ?>" name="doaction2" id="doaction2" class="button-secondary action" />
 			</div>

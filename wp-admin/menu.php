@@ -89,7 +89,7 @@ $menu[5] = array( __('Posts'), 'edit_posts', 'edit.php', '', 'open-if-no-js menu
 		if ( ! $tax->show_ui || ! in_array('post', (array) $tax->object_type, true) )
 			continue;
 
-		$submenu['edit.php'][$i++] = array( esc_attr($tax->label), $tax->manage_cap, 'edit-tags.php?taxonomy=' . $tax->name );
+		$submenu['edit.php'][$i++] = array( esc_attr( $tax->labels->name ), $tax->cap->manage_terms, 'edit-tags.php?taxonomy=' . $tax->name );
 	}
 	unset($tax);
 
@@ -113,12 +113,13 @@ $menu[25] = array( sprintf( __('Comments %s'), "<span id='awaiting-mod' class='c
 
 $_wp_last_object_menu = 25; // The index of the last top-level menu in the object menu group
 
-foreach ( (array) get_post_types( array('show_ui' => true) ) as $ptype ) {
+foreach ( (array) get_post_types( array('show_ui' => true, '_builtin' => false) ) as $ptype ) {
 	$ptype_obj = get_post_type_object( $ptype );
 	$ptype_menu_position = is_int( $ptype_obj->menu_position ) ? $ptype_obj->menu_position : $_wp_last_object_menu++; // If we're to use $_wp_last_object_menu, increment it first.
+	$ptype_for_id = sanitize_html_class( $ptype );
 	if ( is_string( $ptype_obj->menu_icon ) ) {
 		$menu_icon   = esc_url( $ptype_obj->menu_icon );
-		$ptype_class = sanitize_html_class( $ptype );
+		$ptype_class = $ptype_for_id;
 	} else {
 		$menu_icon   = 'div';
 		$ptype_class = 'post';
@@ -129,26 +130,31 @@ foreach ( (array) get_post_types( array('show_ui' => true) ) as $ptype ) {
 	while ( isset($menu[$ptype_menu_position]) || in_array($ptype_menu_position, $core_menu_positions) )
 		$ptype_menu_position++;
 
-	$menu[$ptype_menu_position] = array( esc_attr( $ptype_obj->label ), $ptype_obj->edit_type_cap, "edit.php?post_type=$ptype", '', 'menu-top menu-icon-' . $ptype_class, 'menu-' . $ptype_class, $menu_icon );
-	$submenu["edit.php?post_type=$ptype"][5]  = array( __('Edit'), $ptype_obj->edit_type_cap,  "edit.php?post_type=$ptype");
-	/* translators: add new custom post type */
-	$submenu["edit.php?post_type=$ptype"][10]  = array( _x('Add New', 'post'), $ptype_obj->edit_type_cap, "post-new.php?post_type=$ptype" );
+	$menu[$ptype_menu_position] = array( esc_attr( $ptype_obj->labels->name ), $ptype_obj->cap->edit_posts, "edit.php?post_type=$ptype", '', 'menu-top menu-icon-' . $ptype_class, 'menu-posts-' . $ptype_for_id, $menu_icon );
+	$submenu["edit.php?post_type=$ptype"][5]  = array( $ptype_obj->labels->edit, $ptype_obj->cap->edit_posts,  "edit.php?post_type=$ptype");
+	$submenu["edit.php?post_type=$ptype"][10]  = array( $ptype_obj->labels->add_new, $ptype_obj->cap->edit_posts, "post-new.php?post_type=$ptype" );
 
 	$i = 15;
 	foreach ( $wp_taxonomies as $tax ) {
 		if ( ! $tax->show_ui || ! in_array($ptype, (array) $tax->object_type, true) )
 			continue;
 
-		$submenu["edit.php?post_type=$ptype"][$i++] = array( esc_attr($tax->label), $tax->manage_cap, "edit-tags.php?taxonomy=$tax->name&amp;post_type=$ptype" );
+		$submenu["edit.php?post_type=$ptype"][$i++] = array( esc_attr( $tax->labels->name ), $tax->cap->manage_terms, "edit-tags.php?taxonomy=$tax->name&amp;post_type=$ptype" );
 	}
 }
 unset($ptype, $ptype_obj);
 
 $menu[59] = array( '', 'read', 'separator2', '', 'wp-menu-separator' );
 
-$menu[60] = array( __('Appearance'), 'switch_themes', 'themes.php', '', 'menu-top menu-icon-appearance', 'menu-appearance', 'div' );
-	$submenu['themes.php'][5]  = array(__('Themes'), 'switch_themes', 'themes.php');
-	$submenu['themes.php'][10] = array(__('Menus'), 'switch_themes', 'nav-menus.php');
+if ( current_user_can( 'switch_themes') ) {
+	$menu[60] = array( __('Appearance'), 'switch_themes', 'themes.php', '', 'menu-top menu-icon-appearance', 'menu-appearance', 'div' );
+		$submenu['themes.php'][5]  = array(__('Themes'), 'switch_themes', 'themes.php');
+		$submenu['themes.php'][10] = array(__('Menus'), 'edit_theme_options', 'nav-menus.php');
+} else {
+	$menu[60] = array( __('Appearance'), 'edit_theme_options', 'themes.php', '', 'menu-top menu-icon-appearance', 'menu-appearance', 'div' );
+		$submenu['themes.php'][5]  = array(__('Themes'), 'edit_theme_options', 'themes.php');
+		$submenu['themes.php'][10] = array(__('Menus'), 'edit_theme_options', 'nav-menus.php' );
+}
 
 // Add 'Editor' to the bottom of the Appearence menu.
 add_action('admin_menu', '_add_themes_utility_last', 101);
@@ -282,7 +288,7 @@ foreach ( array( 'submenu' ) as $sub_loop ) {
 unset($sub_loop);
 
 // Loop over the top-level menu.
-// Menus for which the original parent is not acessible due to lack of privs will have the next
+// Menus for which the original parent is not accessible due to lack of privs will have the next
 // submenu in line be assigned as the new menu parent.
 foreach ( $menu as $id => $data ) {
 	if ( empty($submenu[$data[2]]) )

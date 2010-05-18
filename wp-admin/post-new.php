@@ -11,7 +11,7 @@ require_once('./admin.php');
 
 if ( !isset($_GET['post_type']) )
 	$post_type = 'post';
-elseif ( in_array( $_GET['post_type'], get_post_types( array('public' => true ) ) ) )
+elseif ( in_array( $_GET['post_type'], get_post_types( array('show_ui' => true ) ) ) )
 	$post_type = $_GET['post_type'];
 else
 	wp_die( __('Invalid post type') );
@@ -26,7 +26,7 @@ if ( 'post' != $post_type ) {
 
 $post_type_object = get_post_type_object($post_type);
 
-$title = sprintf(__('Add New %s'), $post_type_object->singular_label);
+$title = $post_type_object->labels->add_new_item;
 
 $editing = true;
 
@@ -46,7 +46,7 @@ When you&#8217;re promoted, just reload this page and you&#8217;ll be able to bl
 wp_enqueue_script('autosave');
 
 // Show post form.
-if ( current_user_can($post_type_object->edit_type_cap) ) {
+if ( current_user_can($post_type_object->cap->edit_posts) ) {
 	$post = get_default_post_to_edit( $post_type, true );
 	$post_ID = $post->ID;
 	include('edit-form-advanced.php');

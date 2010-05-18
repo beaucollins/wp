@@ -101,7 +101,7 @@ class Walker_Nav_Menu extends Walker {
 		$item_output .= '</a>';
 		$item_output .= $args->after;
 
-		$output .= apply_filters( 'wp_get_nav_menu_item', $item_output, $args );
+		$output .= apply_filters( 'walker_nav_menu_start_el', $item_output, $item, $depth, $args );
 	}
 
 	/**
@@ -155,10 +155,8 @@ class Walker_Nav_Menu_Checklist extends Walker_Nav_Menu  {
 		$output .= '<input type="hidden" class="menu-item-object" name="menu-item[' . $possible_object_id . '][menu-item-object]" value="'. esc_attr( $item->object ) .'" />';
 		$output .= '<input type="hidden" class="menu-item-parent-id" name="menu-item[' . $possible_object_id . '][menu-item-parent-id]" value="'. esc_attr( $item->menu_item_parent ) .'" />';
 		$output .= '<input type="hidden" class="menu-item-type" name="menu-item[' . $possible_object_id . '][menu-item-type]" value="'. esc_attr( $item->type ) .'" />';
-		$output .= '<input type="hidden" class="menu-item-append" name="menu-item[' . $possible_object_id . '][menu-item-append]" value="'. esc_attr( $item->append ) .'" />';
 		$output .= '<input type="hidden" class="menu-item-title" name="menu-item[' . $possible_object_id . '][menu-item-title]" value="'. esc_attr( $item->title ) .'" />';
 		$output .= '<input type="hidden" class="menu-item-url" name="menu-item[' . $possible_object_id . '][menu-item-url]" value="'. esc_attr( $item->url ) .'" />';
-		$output .= '<input type="hidden" class="menu-item-append" name="menu-item[' . $possible_object_id . '][menu-item-append]" value="'. esc_attr( $item->append ) .'" />';
 		$output .= '<input type="hidden" class="menu-item-target" name="menu-item[' . $possible_object_id . '][menu-item-target]" value="'. esc_attr( $item->target ) .'" />';
 		$output .= '<input type="hidden" class="menu-item-attr_title" name="menu-item[' . $possible_object_id . '][menu-item-attr_title]" value="'. esc_attr( $item->attr_title ) .'" />';
 		$output .= '<input type="hidden" class="menu-item-description" name="menu-item[' . $possible_object_id . '][menu-item-description]" value="'. esc_attr( $item->description ) .'" />';
@@ -172,17 +170,20 @@ class Walker_Nav_Menu_Checklist extends Walker_Nav_Menu  {
  *
  * Optional $args contents:
  *
- * id - The menu id. Defaults to blank.
- * slug - The menu slug. Defaults to blank.
- * menu_class - CSS class to use for the div container of the menu list. Defaults to 'menu'.
- * format - Whether to format the ul. Defaults to 'div'.
+ * menu - The menu that is desired.  Accepts (matching in order) id, slug, name. Defaults to blank.
+ * menu_class - CSS class to use for the ul container of the menu list. Defaults to 'menu'.
+ * container - Whether to wrap the ul, and what to wrap it with. Defaults to 'div'.
+ * conatiner_class - the class that is applied to the container. Defaults to blank.
  * fallback_cb - If the menu doesn't exists, a callback function will fire. Defaults to 'wp_page_menu'.
  * before - Text before the link text.
  * after - Text after the link text.
  * link_before - Text before the link.
  * link_after - Text after the link.
  * echo - Whether to echo the menu or return it. Defaults to echo.
- *
+ * depth - how many levels of the hierarchy are to be included.  0 means all.  Defaults to 0.
+ * walker - allows a custom walker to be specified.
+ * context - the context the menu is used in.
+ * 
  * @todo show_home - If you set this argument, then it will display the link to the home page. The show_home argument really just needs to be set to the value of the text of the link.
  *
  * @since 3.0.0
@@ -192,21 +193,24 @@ class Walker_Nav_Menu_Checklist extends Walker_Nav_Menu  {
 function wp_nav_menu( $args = array() ) {
 	$defaults = array( 'menu' => '', 'container' => 'div', 'container_class' => '', 'menu_class' => 'menu', 'echo' => true,
 	'fallback_cb' => 'wp_page_menu', 'before' => '', 'after' => '', 'link_before' => '', 'link_after' => '',
-	'depth' => 0, 'walker' => '', 'context' => 'frontend' );
+	'depth' => 0, 'walker' => '', 'context' => 'frontend', 'theme_location' => '' );
 
 	$args = wp_parse_args( $args, $defaults );
 	$args = apply_filters( 'wp_nav_menu_args', $args );
 	$args = (object) $args;
 
-	// Get the nav menu
+	// Get the nav menu based on the requested menu
 	$menu = wp_get_nav_menu_object( $args->menu );
 
-	// If we couldn't find a menu based off the name, id or slug,
-	// get the first menu that has items.
+	// Get the nav menu based on the theme_location
+	if ( ! $menu && $args->theme_location && ( $locations = get_nav_menu_locations() ) && isset( $locations[ $args->theme_location ] ) )
+		$menu = wp_get_nav_menu_object( $locations[ $args->theme_location ] );
+
+	// get the first menu that has items if we still can't find a menu
 	if ( ! $menu ) {
 		$menus = wp_get_nav_menus();
 		foreach ( $menus as $menu_maybe ) {
-			if ( wp_get_nav_menu_items($menu_maybe->term_id) ) {
+			if ( $menu_items = wp_get_nav_menu_items($menu_maybe->term_id) ) {
 				$menu = $menu_maybe;
 				break;
 			}
@@ -214,7 +218,7 @@ function wp_nav_menu( $args = array() ) {
 	}
 
 	// If the menu exists, get its items.
-	if ( $menu && ! is_wp_error($menu) )
+	if ( $menu && ! is_wp_error($menu) && !isset($menu_items) )
 		$menu_items = wp_get_nav_menu_items( $menu->term_id );
 
 	// If no menu was found or if the menu has no items, call the fallback_cb
@@ -230,7 +234,7 @@ function wp_nav_menu( $args = array() ) {
 
 	$nav_menu = '';
 	$items = '';
-	$container_allowedtags = apply_filters( 'wp_nav_menu_container_allowedtags', array( 'div', 'p', 'nav' ) );
+	$container_allowedtags = apply_filters( 'wp_nav_menu_container_allowedtags', array( 'div', 'nav' ) );
 
 	if ( in_array( $args->container, $container_allowedtags ) ) {
 		$class = $args->container_class ? ' class="' . esc_attr($args->container_class) . '"' : ' class="menu-'. $menu->slug .'-container"';
@@ -240,9 +244,11 @@ function wp_nav_menu( $args = array() ) {
 	// Set up the $menu_item variables
 	$sorted_menu_items = array();
 	foreach ( (array) $menu_items as $key => $menu_item )
-		$sorted_menu_items[$menu_item->menu_order] = wp_setup_nav_menu_item( $menu_item );
+		$sorted_menu_items[$menu_item->menu_order] = $menu_item;
+	unset($menu_items);
 
 	$items .= walk_nav_menu_tree( $sorted_menu_items, $args->depth, $args );
+	unset($sorted_menu_items);
 
 	// Attributes
 	$attributes  = ' id="menu-' . $menu->slug . '"';
@@ -251,13 +257,10 @@ function wp_nav_menu( $args = array() ) {
 	$nav_menu .= '<ul'. $attributes .'>';
 
 	// Allow plugins to hook into the menu to add their own <li>'s
-	if ( 'frontend' == $args->context ) {
-		$items = apply_filters( 'wp_nav_menu_items', $items, $args );
-		$items = apply_filters( "wp_nav_menu_{$menu->slug}_items", $items, $args );
-		$nav_menu .= $items;
-	} else {
-		$nav_menu .= $items;
-	}
+	$items = apply_filters( 'wp_nav_menu_items', $items, $args );
+	$items = apply_filters( "wp_nav_menu_{$menu->slug}_items", $items, $args );
+	$nav_menu .= $items;
+	unset($items);
 
 	$nav_menu .= '</ul>';
 

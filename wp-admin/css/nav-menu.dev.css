@@ -62,7 +62,6 @@ body {
 	}
 
 	#nav-menu-header {
-		background: url("../images/gray-grad.png") repeat-x scroll left top #dfdfdf;
 		border-width: 1px 1px 0 1px;
 		-moz-border-radius-topleft: 6px;
 		-webkit-border-top-left-radius: 6px;
@@ -153,9 +152,7 @@ body {
 }
 
 #menu-management .nav-tab-active {
-	background: #ececec;
 	border-color:#ccc;
-	border-bottom-color: #ececec;
 }
 
 #select-nav-menu-container {
@@ -200,7 +197,12 @@ body {
 .customlinkdiv .howto input {
 	width: 210px;
 }
-
+#nav-menu-theme-locations .howto select {
+	width: 100%;
+}
+#nav-menu-theme-locations .button-controls {
+	text-align: right;
+}
 .add-menu-item-view-all {
 	height: 400px;
 }
@@ -261,7 +263,9 @@ body {
 	padding: 1em 0;
 }
 
-.menu ul { width: 100%; }
+.menu ul { 
+	width: 100%;
+}
 .menu ul.sub-menu {
 }
 .menu li {
@@ -274,7 +278,6 @@ body {
 	margin-top: 13px;
 }
 .menu-item-handle {
-	background: url("../images/gray-grad.png") repeat-x scroll left top #DFDFDF;
 	border: 1px solid #E6E6E6;
 	position: relative;
 	padding-left: 10px;
@@ -465,7 +468,6 @@ body.js .item-order {
 /* Major/minor publishing actions (classes) */
 .major-publishing-actions {
 	padding: 5px 10px;
-	border-bottom: 1px solid #eee;
 }
 .major-publishing-actions .publishing-action {
 	text-align: right;

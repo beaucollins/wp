@@ -113,7 +113,7 @@ switch ( $action ) {
 							<?php } ?>
 						</tr>
 						<tr class="form-field">
-							<th scope="row"><?php echo _x( 'Registered', 'site' ) ?></th>
+							<th scope="row"><?php _ex( 'Registered', 'site' ) ?></th>
 							<td><input name="blog[registered]" type="text" id="blog_registered" value="<?php echo esc_attr( $details->registered ) ?>" size="40" /></td>
 						</tr>
 						<tr class="form-field">
@@ -133,10 +133,10 @@ switch ( $action ) {
 						<tr>
 							<th scope="row"><?php echo $field_label; ?></th>
 							<td>
-								<input type="radio" name="blog[<?php echo $field_key; ?>]" id="blog_<?php $field_key; ?>_1" value="1"<?php checked( $details->$field_key, 1 ); ?> />
+								<input type="radio" name="blog[<?php echo $field_key; ?>]" id="blog_<?php echo $field_key; ?>_1" value="1"<?php checked( $details->$field_key, 1 ); ?> />
 								<label for="blog_<?php echo $field_key; ?>_1"><?php _e('Yes'); ?></label>
-								<input type="radio" name="blog[<?php echo $field_key; ?>]" id="blog_<?php $field_key; ?>_0" value="0"<?php checked( $details->$field_key, 0 ); ?> />
-								<label for="blog_<?php echo $field_key; ?>"><?php _e('No'); ?></label>
+								<input type="radio" name="blog[<?php echo $field_key; ?>]" id="blog_<?php echo $field_key; ?>_0" value="0"<?php checked( $details->$field_key, 0 ); ?> />
+								<label for="blog_<?php echo $field_key; ?>_0"><?php _e('No'); ?></label>
 							</td>
 						</tr>
 						<?php } ?>
@@ -414,8 +414,8 @@ switch ( $action ) {
 			<select name="action">
 				<option value="-1" selected="selected"><?php _e( 'Bulk Actions' ); ?></option>
 				<option value="delete"><?php _e( 'Delete' ); ?></option>
-				<option value="spam"><?php echo _x( 'Mark as Spam', 'site' ); ?></option>
-				<option value="notspam"><?php echo _x( 'Not Spam', 'site' ); ?></option>
+				<option value="spam"><?php _ex( 'Mark as Spam', 'site' ); ?></option>
+				<option value="notspam"><?php _ex( 'Not Spam', 'site' ); ?></option>
 			</select>
 			<input type="submit" value="<?php esc_attr_e( 'Apply' ); ?>" name="doaction" id="doaction" class="button-secondary action" />
 			<?php wp_nonce_field( 'bulk-ms-sites' ); ?>
@@ -546,7 +546,7 @@ switch ( $action ) {
 										'visit' => '',
 									);
 
-									$actions['edit']	= '<span class="edit"><a href="' . esc_url( admin_url( 'ms-sites.php?action=editblog&amp;id=' . $blog['blog_id'] ) ) . '">' . __( 'Edit' ) . '</a><span>';
+									$actions['edit']	= '<span class="edit"><a href="' . esc_url( admin_url( 'ms-sites.php?action=editblog&amp;id=' . $blog['blog_id'] ) ) . '">' . __( 'Edit' ) . '</a></span>';
 									$actions['backend']	= "<span class='backend'><a href='" . esc_url( get_admin_url($blog['blog_id']) ) . "' class='edit'>" . __( 'Backend' ) . '</a></span>';
 									if ( $current_site->blog_id != $blog['blog_id'] ) {
 										if ( get_blog_status( $blog['blog_id'], 'deleted' ) == '1' )
@@ -567,7 +567,7 @@ switch ( $action ) {
 										$actions['delete']	= '<span class="delete"><a href="' . esc_url( admin_url( 'ms-edit.php?action=confirm&amp;action2=deleteblog&amp;id=' . $blog['blog_id'] . '&amp;msg=' . urlencode( sprintf( __( 'You are about to delete the site %s.' ), $blogname ) ) ) ) . '">' . __( 'Delete' ) . '</a></span>';
 									}
 
-									$actions['visit']	= "<span class='view'><a href='" . esc_url( get_home_url( $blog['blog_id'] ) ) . "' rel='permalink'>" . __( 'Visit' ) . '</a>';
+									$actions['visit']	= "<span class='view'><a href='" . esc_url( get_home_url( $blog['blog_id'] ) ) . "' rel='permalink'>" . __( 'Visit' ) . '</a></span>';
 									$actions = array_filter( $actions );
 									if ( count( $actions ) ) : ?>
 									<div class="row-actions">
@@ -665,8 +665,8 @@ switch ( $action ) {
 			<select name="action2">
 				<option value="-1" selected="selected"><?php _e( 'Bulk Actions' ); ?></option>
 				<option value="delete"><?php _e( 'Delete' ); ?></option>
-				<option value="spam"><?php echo _x( 'Mark as Spam', 'site' ); ?></option>
-				<option value="notspam"><?php echo _x( 'Not Spam', 'site' ); ?></option>
+				<option value="spam"><?php _ex( 'Mark as Spam', 'site' ); ?></option>
+				<option value="notspam"><?php _ex( 'Not Spam', 'site' ); ?></option>
 			</select>
 			<input type="submit" value="<?php esc_attr_e( 'Apply' ); ?>" name="doaction2" id="doaction2" class="button-secondary action" />
 			</div>

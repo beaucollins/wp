@@ -1,6 +1,6 @@
 <?php
 /**
- * The main template file
+ * The main template file.
  *
  * This is the most generic template file in a WordPress theme
  * and one of the two required files for a theme (the other being style.css).
@@ -9,15 +9,15 @@
  * Learn more: http://codex.wordpress.org/Template_Hierarchy
  *
  * @package WordPress
- * @subpackage Twenty Ten
- * @since 3.0.0
+ * @subpackage Twenty_Ten
+ * @since Twenty Ten 1.0
  */
 ?>
  
 <?php get_header(); ?>
 
 		<div id="container">
-			<div id="content">
+			<div id="content" role="main">
 
 			<?php
 			/* Run the loop to output the posts.

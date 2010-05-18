@@ -11,7 +11,7 @@ require_once('./admin.php');
 
 if ( !isset($_GET['post_type']) )
 	$post_type = 'post';
-elseif ( in_array( $_GET['post_type'], get_post_types( array('public' => true ) ) ) )
+elseif ( in_array( $_GET['post_type'], get_post_types( array('show_ui' => true ) ) ) )
 	$post_type = $_GET['post_type'];
 else
 	wp_die( __('Invalid post type') );
@@ -19,7 +19,7 @@ $_GET['post_type'] = $post_type;
 
 $post_type_object = get_post_type_object($post_type);
 
-if ( !current_user_can($post_type_object->edit_type_cap) )
+if ( !current_user_can($post_type_object->cap->edit_posts) )
 	wp_die(__('Cheatin&#8217; uh?'));
 
 // Back-compat for viewing comments of an entry
@@ -46,7 +46,7 @@ if ( empty($pagenum) )
 $per_page = 'edit_' . $post_type . '_per_page';
 $per_page = (int) get_user_option( $per_page );
 if ( empty( $per_page ) || $per_page < 1 )
-	$per_page = 15;
+	$per_page = 20;
 // @todo filter based on type
 $per_page = apply_filters( 'edit_posts_per_page', $per_page );
 
@@ -73,7 +73,7 @@ if ( isset($_GET['doaction']) || isset($_GET['doaction2']) || isset($_GET['delet
 		case 'trash':
 			$trashed = 0;
 			foreach( (array) $post_ids as $post_id ) {
-				if ( !current_user_can($post_type_object->delete_cap, $post_id) )
+				if ( !current_user_can($post_type_object->cap->delete_post, $post_id) )
 					wp_die( __('You are not allowed to move this item to the Trash.') );
 
 				if ( !wp_trash_post($post_id) )
@@ -86,7 +86,7 @@ if ( isset($_GET['doaction']) || isset($_GET['doaction2']) || isset($_GET['delet
 		case 'untrash':
 			$untrashed = 0;
 			foreach( (array) $post_ids as $post_id ) {
-				if ( !current_user_can($post_type_object->delete_cap, $post_id) )
+				if ( !current_user_can($post_type_object->cap->delete_post, $post_id) )
 					wp_die( __('You are not allowed to restore this item from the Trash.') );
 
 				if ( !wp_untrash_post($post_id) )
@@ -101,7 +101,7 @@ if ( isset($_GET['doaction']) || isset($_GET['doaction2']) || isset($_GET['delet
 			foreach( (array) $post_ids as $post_id ) {
 				$post_del = & get_post($post_id);
 
-				if ( !current_user_can($post_type_object->delete_cap, $post_id) )
+				if ( !current_user_can($post_type_object->cap->delete_post, $post_id) )
 					wp_die( __('You are not allowed to delete this item.') );
 
 				if ( $post_del->post_type == 'attachment' ) {
@@ -137,12 +137,10 @@ if ( isset($_GET['doaction']) || isset($_GET['doaction2']) || isset($_GET['delet
 	 exit;
 }
 
-$title = sprintf(__('Edit %s'), $post_type_object->label);
-
 wp_enqueue_script('inline-edit-post');
 
 $user_posts = false;
-if ( !current_user_can($post_type_object->edit_others_cap) ) {
+if ( !current_user_can($post_type_object->cap->edit_others_posts) ) {
 	$user_posts_count = $wpdb->get_var( $wpdb->prepare("SELECT COUNT(1) FROM $wpdb->posts WHERE post_type = '%s' AND post_status NOT IN ('trash', 'auto-draft') AND post_author = %d", $post_type, $current_user->ID) );
 	$user_posts = true;
 	if ( $user_posts_count && empty($_GET['post_status']) && empty($_GET['all_posts']) && empty($_GET['author']) )
@@ -156,6 +154,7 @@ if ( $post_type_object->hierarchical )
 else
 	$num_pages = $wp_query->max_num_pages;
 
+$title = $post_type_object->labels->name;
 require_once('./admin-header.php');
 
 if ( empty($_GET['mode']) )
@@ -165,7 +164,7 @@ else
 
 <div class="wrap">
 <?php screen_icon(); ?>
-<h2><?php echo esc_html( $title ); ?> <a href="<?php echo $post_new_file ?>" class="button add-new-h2"><?php echo esc_html_x('Add New', 'post'); ?></a> <?php
+<h2><?php echo esc_html( $post_type_object->labels->name ); ?> <a href="<?php echo $post_new_file ?>" class="button add-new-h2"><?php echo esc_html($post_type_object->labels->add_new); ?></a> <?php
 if ( isset($_GET['s']) && $_GET['s'] )
 	printf( '<span class="subtitle">' . __('Search results for &#8220;%s&#8221;') . '</span>', get_search_query() ); ?>
 </h2>
@@ -262,9 +261,9 @@ endif;
 </ul>
 
 <p class="search-box">
-	<label class="screen-reader-text" for="post-search-input"><?php printf( _x('Search %s', '%s: post type name'), $post_type_object->label ); ?>:</label>
+	<label class="screen-reader-text" for="post-search-input"><?php echo $post_type_object->labels->search_items; ?>:</label>
 	<input type="text" id="post-search-input" name="s" value="<?php the_search_query(); ?>" />
-	<input type="submit" value="<?php echo esc_attr( sprintf( _x('Search %s', '%s: post type name'), $post_type_object->label ) ); ?>" class="button" />
+	<input type="submit" value="<?php echo esc_attr( $post_type_object->labels->search_items  ); ?>" class="button" />
 </p>
 
 <input type="hidden" name="post_status" class="post_status_page" value="<?php echo !empty($_GET['post_status']) ? esc_attr($_GET['post_status']) : 'all'; ?>" />
@@ -347,7 +346,7 @@ do_action('restrict_manage_posts');
 <input type="submit" id="post-query-submit" value="<?php esc_attr_e('Filter'); ?>" class="button-secondary" />
 <?php }
 
-if ( $is_trash && current_user_can($post_type_object->edit_others_cap) ) { ?>
+if ( $is_trash && current_user_can($post_type_object->cap->edit_others_posts) ) { ?>
 <input type="submit" name="delete_all" id="delete_all" value="<?php esc_attr_e('Empty Trash'); ?>" class="button-secondary apply" />
 <?php } ?>
 </div>
@@ -398,7 +397,7 @@ if ( $page_links )
 <?php } ?>
 </select>
 <input type="submit" value="<?php esc_attr_e('Apply'); ?>" name="doaction2" id="doaction2" class="button-secondary action" />
-<?php if ( $is_trash && current_user_can($post_type_object->edit_others_cap) ) { ?>
+<?php if ( $is_trash && current_user_can($post_type_object->cap->edit_others_posts) ) { ?>
 <input type="submit" name="delete_all2" id="delete_all2" value="<?php esc_attr_e('Empty Trash'); ?>" class="button-secondary apply" />
 <?php } ?>
 <br class="clear" />
@@ -410,9 +409,9 @@ if ( $page_links )
 <div class="clear"></div>
 <p><?php
 if ( isset($_GET['post_status']) && 'trash' == $_GET['post_status'] )
-	printf( __( 'No %s found in the Trash.' ), $post_type_object->label );
+	echo $post_type_object->labels->not_found_in_trash;
 else
-	printf( __( 'No %s found.' ), $post_type_object->label );
+	echo $post_type_object->labels->not_found;
 ?></p>
 <?php } ?>
 

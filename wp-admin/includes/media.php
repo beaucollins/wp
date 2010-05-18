@@ -379,7 +379,7 @@ function media_buttons() {
 add_action( 'media_buttons', 'media_buttons' );
 
 function _media_button($title, $icon, $type) {
-	return "<a href='" . get_upload_iframe_src($type) . "' id='add_$type' class='thickbox' title='$title'><img src='" . esc_url( admin_url( $icon ) ) . "' alt='$title' /></a>";
+	return "<a href='" . esc_url( get_upload_iframe_src($type) ) . "' id='add_$type' class='thickbox' title='$title'><img src='" . esc_url( admin_url( $icon ) ) . "' alt='$title' /></a>";
 }
 
 function get_upload_iframe_src($type) {
@@ -1247,7 +1247,7 @@ function get_media_item( $attachment_id, $args = null ) {
 			if ( !empty( $media_dims ) )
 				$item .= "<p><strong>" . __('Dimensions:') . "</strong> $media_dims</p>\n";
 
-			echo "</td></tr>\n";
+			$item .= "</td></tr>\n";
 
 
 
@@ -1419,6 +1419,21 @@ jQuery(document).ready(function($){
 	<?php echo $errors['upload_error']->get_error_message(); ?>
 <?php } ?>
 </div>
+<div id="media-upload-size">
+<?php 
+	$upload_size_unit = $max_upload_size =  wp_max_upload_size();
+	$sizes = array( 'KB', 'MB', 'GB' );
+	for( $u = -1; $upload_size_unit > 1024 && $u < count( $sizes ) - 1; $u++ )
+		$upload_size_unit /= 1024;
+	if ( $u < 0 ) {
+		$upload_size_unit = 0;
+		$u = 0;
+	} else {
+		$upload_size_unit = (int) $upload_size_unit;
+	}
+	printf( '<h3>' . __( 'Maximum upload file size: %d%s' ) . '</h3>', $upload_size_unit, $sizes[$u] );
+?>
+</div>
 
 <?php
 // Check quota for this blog if multisite
@@ -1433,7 +1448,7 @@ if ( $flash ) : ?>
 var swfu;
 SWFUpload.onload = function() {
 	var settings = {
-			button_text: '<span class="button"><?php _e('Select Files'); ?></span>',
+			button_text: '<span class="button"><?php _e('Select Files'); ?><\/span>',
 			button_text_style: '.button { text-align: center; font-weight: bold; font-family:"Lucida Grande",Verdana,Arial,"Bitstream Vera Sans",sans-serif; font-size: 11px; text-shadow: 0 1px 0 #FFFFFF; color:#464646; }',
 			button_height: "23",
 			button_width: "132",
@@ -1453,7 +1468,7 @@ SWFUpload.onload = function() {
 				"tab" : "<?php echo $tab; ?>",
 				"short" : "1"
 			},
-			file_size_limit : "<?php echo wp_max_upload_size(); ?>b",
+			file_size_limit : "<?php echo $max_upload_size; ?>b",
 			file_dialog_start_handler : fileDialogStart,
 			file_queued_handler : fileQueued,
 			upload_start_handler : uploadStart,
@@ -1719,7 +1734,7 @@ jQuery(function($){
 <?php _e('Sort Order:'); ?>
 <a href="#" id="asc"><?php _e('Ascending'); ?></a> |
 <a href="#" id="desc"><?php _e('Descending'); ?></a> |
-<a href="#" id="clear"><?php echo _x('Clear', 'verb'); ?></a>
+<a href="#" id="clear"><?php _ex('Clear', 'verb'); ?></a>
 </div>
 <form enctype="multipart/form-data" method="post" action="<?php echo esc_attr($form_action_url); ?>" class="media-upload-form validate" id="gallery-form">
 <?php wp_nonce_field('media-form'); ?>

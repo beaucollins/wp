@@ -203,7 +203,7 @@ function wp_default_scripts( &$scripts ) {
 	// these error messages came from the sample swfupload js, they might need changing.
 	$scripts->localize( 'swfupload-handlers', 'swfuploadL10n', array(
 			'queue_limit_exceeded' => __('You have attempted to queue too many files.'),
-			'file_exceeds_size_limit' => sprintf( __('This file is too big. The maximum upload size for your server is %s.'), $max_upload_size ),
+			'file_exceeds_size_limit' => __('This file exceeds the maximum upload size for this site.'),
 			'zero_byte_file' => __('This file is empty. Please try another.'),
 			'invalid_filetype' => __('This file type is not allowed. Please try another.'),
 			'default_error' => __('An error occurred in the upload. Please try again later.'),
@@ -393,7 +393,7 @@ function wp_default_scripts( &$scripts ) {
 		) );
 
 		// Custom Navigation
-		$scripts->add( 'nav-menu', "/wp-admin/js/nav-menu$suffix.js", false, '20100508' );
+		$scripts->add( 'nav-menu', "/wp-admin/js/nav-menu$suffix.js", false, '20100515' );
 		$scripts->localize( 'nav-menu', 'navMenuL10n', array(
 			'home' => _x('Home', 'nav menu home label'),
 			'homeurl' => home_url('/'),
@@ -405,9 +405,8 @@ function wp_default_scripts( &$scripts ) {
 			'warnDeleteMenuItem' => __( "You are about to permanently delete this menu item. \n 'Cancel' to stop, 'OK' to delete." ),
 		) );
 
-		$scripts->add( 'custom-background', "/wp-admin/js/custom-background$suffix.js", array('farbtastic'), '20100321' );
+		$scripts->add( 'custom-background', "/wp-admin/js/custom-background$suffix.js", array('farbtastic'), '20100516' );
 		$scripts->add_data( 'custom-background', 'group', 1 );
-		// See wp_just_in_time_script_localization() for translation data for this object
 	}
 }
 
@@ -444,13 +443,13 @@ function wp_default_styles( &$styles ) {
 	// Any rtl stylesheets that don't have a .dev version for ltr
 	$no_suffix = array( 'farbtastic' );
 
-	$styles->add( 'wp-admin', "/wp-admin/css/wp-admin$suffix.css", array(), '20100506' );
+	$styles->add( 'wp-admin', "/wp-admin/css/wp-admin$suffix.css", array(), '20100515' );
 
 	$styles->add( 'ie', "/wp-admin/css/ie$suffix.css", array(), '20100219' );
 	$styles->add_data( 'ie', 'conditional', 'lte IE 7' );
 
 	// all colors stylesheets need to have the same query strings (cache manifest compat)
-	$colors_version = '20100503';
+	$colors_version = '20100512';
 
 	// Register "meta" stylesheet for admin colors. All colors-* style sheets should have the same version string.
 	$styles->add( 'colors', true, array(), $colors_version );
@@ -461,13 +460,13 @@ function wp_default_styles( &$styles ) {
 	$styles->add( 'colors-classic', "/wp-admin/css/colors-classic$suffix.css", array(), $colors_version );
 	$styles->add_data( 'colors-classic', 'rtl', true );
 
-	$styles->add( 'ms', "/wp-admin/css/ms$suffix.css", array(), '20100406' );
+	$styles->add( 'ms', "/wp-admin/css/ms$suffix.css", array(), '20100512' );
 	$styles->add( 'global', "/wp-admin/css/global$suffix.css", array(), '20100108' );
-	$styles->add( 'media', "/wp-admin/css/media$suffix.css", array(), '20091029' );
+	$styles->add( 'media', "/wp-admin/css/media$suffix.css", array(), '20100515' );
 	$styles->add( 'widgets', "/wp-admin/css/widgets$suffix.css", array(), '20091118' );
 	$styles->add( 'dashboard', "/wp-admin/css/dashboard$suffix.css", array(), '20100424' );
 	$styles->add( 'install', "/wp-admin/css/install$suffix.css", array(), '20100313' ); // Readme as well
-	$styles->add( 'theme-editor', "/wp-admin/css/theme-editor$suffix.css", array(), '20090625' );
+	$styles->add( 'theme-editor', "/wp-admin/css/theme-editor$suffix.css", array(), '20100514' );
 	$styles->add( 'press-this', "/wp-admin/css/press-this$suffix.css", array(), '20100424' );
 	$styles->add( 'thickbox', '/wp-includes/js/thickbox/thickbox.css', array(), '20090514' );
 	$styles->add( 'login', "/wp-admin/css/login$suffix.css", array(), '20100403' );
@@ -476,7 +475,7 @@ function wp_default_styles( &$styles ) {
 	$styles->add( 'farbtastic', '/wp-admin/css/farbtastic.css', array(), '1.2' );
 	$styles->add( 'jcrop', '/wp-includes/js/jcrop/jquery.Jcrop.css', array(), '0.9.8' );
 	$styles->add( 'imgareaselect', '/wp-includes/js/imgareaselect/imgareaselect.css', array(), '0.9.1' );
-	$styles->add( 'nav-menu', "/wp-admin/css/nav-menu$suffix.css", array(), '20100506' );
+	$styles->add( 'nav-menu', "/wp-admin/css/nav-menu$suffix.css", array(), '20100514' );
 
 	foreach ( $rtl_styles as $rtl_style ) {
 		$styles->add_data( $rtl_style, 'rtl', true );
@@ -529,9 +528,6 @@ function wp_just_in_time_script_localization() {
 		'l10n_print_after' => 'try{convertEntities(autosaveL10n);}catch(e){};'
 	) );
 
-	wp_localize_script( 'custom-background', 'customBackgroundL10n', array(
-		'backgroundcolor' => '#' . get_background_color(),
-	) );
 }
 
 /**

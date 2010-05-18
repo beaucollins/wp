@@ -132,7 +132,7 @@ case 'imgedit-preview' :
 	die();
 	break;
 case 'menu-quick-search':
-	if ( ! current_user_can( 'switch_themes' ) )
+	if ( ! current_user_can( 'edit_theme_options' ) )
 		die('-1');
 
 	require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
@@ -219,7 +219,7 @@ function _wp_ajax_add_hierarchical_term() {
 	$action = $_POST['action'];
 	$taxonomy = get_taxonomy(substr($action, 4));
 	check_ajax_referer( $action );
-	if ( !current_user_can( $taxonomy->edit_cap ) )
+	if ( !current_user_can( $taxonomy->cap->edit_terms ) )
 		die('-1');
 	$names = explode(',', $_POST['new'.$taxonomy->name]);
 	$parent = isset($_POST['new'.$taxonomy->name.'_parent']) ? (int) $_POST['new'.$taxonomy->name.'_parent'] : 0;
@@ -281,7 +281,10 @@ function _wp_ajax_add_hierarchical_term() {
 	}
 
 	ob_start();
-		wp_dropdown_categories( array( 'taxonomy' => $taxonomy->name, 'hide_empty' => 0, 'name' => 'new'.$taxonomy->name.'_parent', 'orderby' => 'name', 'hierarchical' => 1, 'show_option_none' => sprintf( __('&mdash; Parent %s &mdash;'), $taxonomy->singular_label ) ) );
+		wp_dropdown_categories( array(
+			'taxonomy' => $taxonomy->name, 'hide_empty' => 0, 'name' => 'new'.$taxonomy->name.'_parent', 'orderby' => 'name',
+			'hierarchical' => 1, 'show_option_none' => '&mdash; '.$taxonomy->labels->parent_item.' &mdash;'
+		) );
 	$sup = ob_get_contents();
 	ob_end_clean();
 	$add['supplemental'] = array( 'newcat_parent' => $sup );
@@ -334,7 +337,7 @@ case 'delete-tag' :
 	$taxonomy = !empty($_POST['taxonomy']) ? $_POST['taxonomy'] : 'post_tag';
 	$tax = get_taxonomy($taxonomy);
 
-	if ( !current_user_can( $tax->delete_cap ) )
+	if ( !current_user_can( $tax->cap->delete_terms ) )
 		die('-1');
 
 	$tag = get_term( $tag_id, $taxonomy );
@@ -399,7 +402,7 @@ case 'delete-link' :
 case 'delete-menu-item' :
 	$menu_item_id = (int) $_POST['menu-item'];
 	check_admin_referer( 'delete-menu_item_' . $menu_item_id );
-	if ( ! current_user_can( 'switch_themes' ) )
+	if ( ! current_user_can( 'edit_theme_options' ) )
 		die('-1');
 
 	if ( is_nav_menu_item( $menu_item_id ) && wp_delete_post( $menu_item_id, true ) )
@@ -566,7 +569,7 @@ case 'add-tag' : // From Manage->Tags
 
 	$x = new WP_Ajax_Response();
 
-	if ( !current_user_can( $tax->edit_cap ) )
+	if ( !current_user_can( $tax->cap->edit_terms ) )
 		die('-1');
 
 	$tag = wp_insert_term($_POST['tag-name'], $taxonomy, $_POST );
@@ -817,7 +820,7 @@ case 'edit-comment' :
 	$x->send();
 	break;
 case 'add-menu-item' :
-	if ( ! current_user_can( 'switch_themes' ) )
+	if ( ! current_user_can( 'edit_theme_options' ) )
 		die('-1');
 
 	check_admin_referer( 'add-menu_item', 'menu-settings-column-nonce' );
@@ -1091,7 +1094,7 @@ case 'hidden-columns' :
 	die('1');
 	break;
 case 'menu-quick-search':
-	if ( ! current_user_can( 'switch_themes' ) )
+	if ( ! current_user_can( 'edit_theme_options' ) )
 		die('-1');
 
 	require_once ABSPATH . 'wp-admin/includes/nav-menu.php';
@@ -1204,7 +1207,7 @@ case 'inline-save-tax':
 		die( __('Cheatin&#8217; uh?') );
 	$tax = get_taxonomy($taxonomy);
 
-	if ( ! current_user_can( $tax->edit_cap ) )
+	if ( ! current_user_can( $tax->cap->edit_terms ) )
 		die( __('Cheatin&#8217; uh?') );
 
 	if ( ! isset($_POST['tax_ID']) || ! ( $id = (int) $_POST['tax_ID'] ) )
@@ -1328,7 +1331,7 @@ case 'lj-importer' :
 case 'widgets-order' :
 	check_ajax_referer( 'save-sidebar-widgets', 'savewidgets' );
 
-	if ( !current_user_can('switch_themes') )
+	if ( !current_user_can('edit_theme_options') )
 		die('-1');
 
 	unset( $_POST['savewidgets'], $_POST['action'] );
@@ -1358,7 +1361,7 @@ case 'widgets-order' :
 case 'save-widget' :
 	check_ajax_referer( 'save-sidebar-widgets', 'savewidgets' );
 
-	if ( !current_user_can('switch_themes') || !isset($_POST['id_base']) )
+	if ( !current_user_can('edit_theme_options') || !isset($_POST['id_base']) )
 		die('-1');
 
 	unset( $_POST['savewidgets'], $_POST['action'] );

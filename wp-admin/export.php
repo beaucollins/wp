@@ -101,7 +101,7 @@ foreach ( (array) $authors as $author ) {
 <?php foreach ( get_taxonomies( array( 'show_ui' => true ), 'objects' ) as $tax_obj ) {
 	$term_dropdown = wp_dropdown_categories( array( 'taxonomy' => $tax_obj->name, 'hide_if_empty' => true, 'show_option_all' => __( 'All Terms' ), 'name' => 'taxonomy[' . $tax_obj->name . ']', 'id' => 'taxonomy-' . $tax_obj->name, 'class' => '', 'echo' => false ) );
 	if ( $term_dropdown )
-		echo '<label for="taxonomy-' . $tax_obj->name . '">' . $tax_obj->label . '</label>: ' . $term_dropdown . '<br/>';
+		echo '<label for="taxonomy-' . $tax_obj->name . '">' . $tax_obj->labels->name . '</label>: ' . $term_dropdown . '<br/>';
 }
 ?>
 </td>
@@ -112,7 +112,7 @@ foreach ( (array) $authors as $author ) {
 <select name="post_type" id="post_type">
 	<option value="all" selected="selected"><?php _e('All Content'); ?></option>
 	<?php foreach ( get_post_types( array( 'public' => true, 'can_export' => true ), 'objects' ) as $post_type_obj ) { ?>
-		<option value="<?php echo $post_type_obj->name; ?>"><?php echo $post_type_obj->label; ?></option>
+		<option value="<?php echo $post_type_obj->name; ?>"><?php echo $post_type_obj->labels->name; ?></option>
 	<?php } ?>
 </select>
 </td>

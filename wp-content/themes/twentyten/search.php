@@ -1,17 +1,17 @@
 <?php
 /**
- * The Search Results template
+ * The template for displaying Search Results pages.
  *
  * @package WordPress
- * @subpackage Twenty Ten
- * @since 3.0.0
+ * @subpackage Twenty_Ten
+ * @since Twenty Ten 1.0
  */
 ?>
 
 <?php get_header(); ?>
 
 		<div id="container">
-			<div id="content">
+			<div id="content" role="main">
 
 <?php if ( have_posts() ) : ?>
 				<h1 class="page-title"><?php printf( __( 'Search Results for: %s', 'twentyten' ), '<span>' . get_search_query() . '</span>' ); ?></h1>

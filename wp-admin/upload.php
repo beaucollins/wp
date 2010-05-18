@@ -20,9 +20,9 @@ if ( isset($_GET['find_detached']) ) {
 	if ( !current_user_can('edit_posts') )
 		wp_die( __('You are not allowed to scan for lost attachments.') );
 
-	$all_posts = implode(',', $wpdb->get_col("SELECT ID FROM $wpdb->posts WHERE post_type IN ('post', 'page')"));
+	$all_posts = implode( ',', $wpdb->get_col("SELECT ID FROM $wpdb->posts WHERE post_type IN ('" . join("', '", get_post_types() ) . "')"));
 	$lost = $wpdb->get_col("SELECT ID FROM $wpdb->posts WHERE post_type = 'attachment' AND post_parent > '0' and post_parent NOT IN ($all_posts)");
-
+	
 	$_GET['detached'] = 1;
 
 } elseif ( isset($_GET['found_post_id']) && isset($_GET['media']) ) {
@@ -261,6 +261,7 @@ unset($type_links);
 </form>
 
 <form id="posts-filter" action="" method="get">
+<?php wp_nonce_field('bulk-media'); ?>
 <?php if ( have_posts() || isset( $orphans ) ) { ?>
 <div class="tablenav">
 <?php
@@ -300,7 +301,6 @@ if ( $page_links ) : ?>
 <?php } ?>
 </select>
 <input type="submit" value="<?php esc_attr_e('Apply'); ?>" name="doaction" id="doaction" class="button-secondary action" />
-<?php wp_nonce_field('bulk-media'); ?>
 
 <?php
 if ( !is_singular() && !isset($_GET['detached']) && !$is_trash ) {
@@ -363,9 +363,9 @@ if ( isset($_GET['detached']) ) { ?>
 <tr>
 	<th scope="col" class="check-column"><input type="checkbox" /></th>
 	<th scope="col"></th>
-	<th scope="col"><?php /* translators: column name in media */ echo _x('Media', 'media column name'); ?></th>
-	<th scope="col"><?php /* translators: column name in media */ echo _x('Author', 'media column name'); ?></th>
-	<th scope="col"><?php /* translators: column name in media */ echo _x('Date Added', 'media column name'); ?></th>
+	<th scope="col"><?php /* translators: column name in media */ _ex('Media', 'media column name'); ?></th>
+	<th scope="col"><?php /* translators: column name in media */ _ex('Author', 'media column name'); ?></th>
+	<th scope="col"><?php /* translators: column name in media */ _ex('Date Added', 'media column name'); ?></th>
 </tr>
 </thead>
 
@@ -373,9 +373,9 @@ if ( isset($_GET['detached']) ) { ?>
 <tr>
 	<th scope="col" class="check-column"><input type="checkbox" /></th>
 	<th scope="col"></th>
-	<th scope="col"><?php /* translators: column name in media */ echo _x('Media', 'media column name'); ?></th>
-	<th scope="col"><?php /* translators: column name in media */ echo _x('Author', 'media column name'); ?></th>
-	<th scope="col"><?php /* translators: column name in media */ echo _x('Date Added', 'media column name'); ?></th>
+	<th scope="col"><?php /* translators: column name in media */ _ex('Media', 'media column name'); ?></th>
+	<th scope="col"><?php /* translators: column name in media */ _ex('Author', 'media column name'); ?></th>
+	<th scope="col"><?php /* translators: column name in media */ _ex('Date Added', 'media column name'); ?></th>
 </tr>
 </tfoot>
 

@@ -21,8 +21,6 @@ var wpNavMenu;
 		
 		menuList : undefined,	// Set in init.
 		targetList : undefined, // Set in init.
-		
-		autoCompleteData : {},
 
 		// Functions that run on init.
 		init : function() {
@@ -47,8 +45,6 @@ var wpNavMenu;
 			this.initToggles();
 
 			this.initTabManager();
-		
-			this.checkForEmptyMenu();
 		},
 		
 		jQueryExtensions : function() {
@@ -163,20 +159,20 @@ var wpNavMenu;
 		},
 
 		initSortables : function() {
-			var currentDepth = 0, originalDepth, minDepth, maxDepth, prevBottom,
-				menuLeft = api.menuList.offset().left,
-				newItem, transport;
+			var currentDepth = 0, originalDepth, minDepth, maxDepth,
+				prev, next, prevBottom, nextThreshold, helperHeight, transport,
+				menuLeft = api.menuList.offset().left;
 
 			api.menuList.sortable({
 				handle: '.menu-item-handle',
 				placeholder: 'sortable-placeholder',
 				start: function(e, ui) {
-					var height, width, parent, children, maxChildDepth;
+					var height, width, parent, children, maxChildDepth, tempHolder;
 
 					transport = ui.item.children('.menu-item-transport');
 				
 					// Set depths. currentDepth must be set before children are located.
-					originalDepth = ( newItem ) ? 0 : ui.item.menuItemDepth();
+					originalDepth = ui.item.menuItemDepth();
 					updateCurrentDepth(ui, originalDepth);
 				
 					// Attach child elements to parent
@@ -185,14 +181,12 @@ var wpNavMenu;
 					children = parent.childMenuItems();
 					transport.append( children );
 
-					// Now that the element is complete, we can update...
-					updateDepthRange(ui);
-
 					// Update the height of the placeholder to match the moving item.
 					height = transport.outerHeight();
 					// If there are children, account for distance between top of children and parent
 					height += ( height > 0 ) ? (ui.placeholder.css('margin-top').slice(0, -2) * 1) : 0;
 					height += ui.helper.outerHeight();
+					helperHeight = height;
 					height -= 2; // Subtract 2 for borders
 					ui.placeholder.height(height);
 
@@ -206,6 +200,17 @@ var wpNavMenu;
 					width += api.depthToPx(maxChildDepth - originalDepth); // Account for children
 					width -= 2; // Subtract 2 for borders
 					ui.placeholder.width(width);
+					
+					// Update the list of menu items.
+					tempHolder = ui.placeholder.next();
+					tempHolder.css( 'margin-top', helperHeight + 'px' ); // Set the margin to absorb the placeholder
+					ui.placeholder.detach(); // detach or jQuery UI will think the placeholder is a menu item
+					$(this).sortable( "refresh" ); // The children aren't sortable. We should let jQ UI know.
+					ui.item.after( ui.placeholder ); // reattach the placeholder.
+					tempHolder.css('margin-top', 0); // reset the margin
+					
+					// Now that the element is complete, we can update...
+					updateSharedVars(ui);
 				},
 				stop: function(e, ui) {
 					var children, depthChange = currentDepth - originalDepth;
@@ -220,16 +225,14 @@ var wpNavMenu;
 					}
 					// Update the item data.
 					ui.item.updateParentMenuItemDBId();
-					// Update positions
-					api.recalculateMenuItemPositions();
 				},
 				change: function(e, ui) {
 					// Make sure the placeholder is inside the menu.
 					// Otherwise fix it, or we're in trouble.
 					if( ! ui.placeholder.parent().hasClass('menu') )
-						ui.placeholder.appendTo(api.menuList);
+						(prev.length) ? prev.after( ui.placeholder ) : api.menuList.prepend( ui.placeholder );
 
-					updateDepthRange(ui);
+					updateSharedVars(ui);
 				},
 				sort: function(e, ui) {
 					var offset = ui.helper.offset(),
@@ -242,18 +245,28 @@ var wpNavMenu;
 
 					if( depth != currentDepth )
 						updateCurrentDepth(ui, depth);
+						
+					// If we overlap the next element, manually shift downwards
+					if( nextThreshold && offset.top + helperHeight > nextThreshold ) {
+						next.after( ui.placeholder );
+						updateSharedVars( ui );
+						$(this).sortable( "refreshPositions" );
+					}
 				}
 			});
 
-			function updateDepthRange(ui) {
-				var prev = ui.placeholder.prev(),
-					next = ui.placeholder.next(), depth;
+			function updateSharedVars(ui) {
+				var depth;
+				
+				prev = ui.placeholder.prev();
+				next = ui.placeholder.next();
 
 				// Make sure we don't select the moving item.
 				if( prev[0] == ui.item[0] ) prev = prev.prev();
 				if( next[0] == ui.item[0] ) next = next.next();
 
 				prevBottom = (prev.length) ? prev.offset().top + prev.height() : 0;
+				nextThreshold = (next.length) ? next.offset().top + next.height() / 3 : 0;
 				minDepth = (next.length) ? next.menuItemDepth() : 0;
 
 				if( prev.length )
@@ -274,6 +287,8 @@ var wpNavMenu;
 				if ( e.target && e.target.className ) {
 					if ( -1 != e.target.className.indexOf('item-edit') ) {
 						return that.eventOnClickEditLink(e.target);
+					} else if ( -1 != e.target.className.indexOf('menu-save') ) {
+						return that.eventOnClickMenuSave(e.target);
 					} else if ( -1 != e.target.className.indexOf('menu-delete') ) {
 						return that.eventOnClickMenuDelete(e.target);
 					} else if ( -1 != e.target.className.indexOf('item-delete') ) {
@@ -329,44 +344,45 @@ var wpNavMenu;
 		},
 	
 		attachQuickSearchListeners : function() {
-			var that = this,
-				form = $('#nav-menu-meta');
+			var searchTimer;
 			
-			// auto-suggest for the quick-search boxes
-			$('input.quick-search').each(function(i, el) {
-				that.setupQuickSearchEventListeners(el);
-			});
-			form.find('.quick-search-submit').click(function() {
-				$(this).trigger('wp-quick-search');
-				return false;
-			});
-			form.find('.inside').children().bind('wp-quick-search', function() {
-				that.quickSearch( $(this).attr('id') );
-			});
+			$('.quick-search').keypress(function(e){
+				var t = $(this);
+				
+				if( 13 == e.which ) {
+					api.updateQuickSearchResults( t );
+					return false;
+				}
+				
+				if( searchTimer ) clearTimeout(searchTimer);
+				
+				searchTimer = setTimeout(function(){
+					api.updateQuickSearchResults( t );
+				}, 400);
+			}).attr('autocomplete','off');
 		},
-	
-		quickSearch : function(id) {
-			var type = $('#' + id + ' .quick-search').attr('name'),
-			q = $('#' + id + ' .quick-search').val(),
-			menu = $('#menu').val(),
-			nonce = $('#menu-settings-column-nonce').val(),
-			params = {},
-			that = this,
-			processMethod = function(){};
-
-			processMethod = that.processQuickSearchQueryResponse;
-
+		
+		updateQuickSearchResults : function(input) {
+			var panel, params,
+			minSearchLength = 2,
+			q = input.val();
+			
+			if( q.length < minSearchLength ) return;
+			
+			panel = input.parents('.tabs-panel');
 			params = {
 				'action': 'menu-quick-search',
 				'response-format': 'markup',
-				'menu': menu,
-				'menu-settings-column-nonce': nonce,
+				'menu': $('#menu').val(),
+				'menu-settings-column-nonce': $('#menu-settings-column-nonce').val(),
 				'q': q,
-				'type': type
+				'type': input.attr('name')
 			};
 
+			$('img.waiting', panel).show();
+
 			$.post( ajaxurl, params, function(menuMarkup) {
-				processMethod.call(that, menuMarkup, params);
+				api.processQuickSearchQueryResponse(menuMarkup, params, panel);
 			});
 		},
 	
@@ -439,45 +455,39 @@ var wpNavMenu;
 	
 		attachHomeLinkListener : function() {
 			$('.add-home-link', '.customlinkdiv').click(function(e) {
-				api.addLinkToMenu( navMenuL10n.homeurl, navMenuL10n.home, api.addMenuItemToTop, api.recalculateMenuItemPositions );
+				api.addLinkToMenu( navMenuL10n.homeurl, navMenuL10n.home, api.addMenuItemToTop );
 				return false;
 			});
 		},
 
 		attachTabsPanelListeners : function() {
 			$('#menu-settings-column').bind('click', function(e) {
-				var selectAreaMatch, activePanel, panelIdMatch, wrapper, inputs, i, items;
+				var selectAreaMatch, activePanel, panelId, wrapper, items,
+					target = $(e.target);
 				
-				if ( e.target && e.target.className && -1 != e.target.className.indexOf('nav-tab-link') ) {
-					panelIdMatch = /#(.*)$/.exec(e.target.href);
-					wrapper = $(e.target).parents('.inside').first()[0];
-					inputs = wrapper ? wrapper.getElementsByTagName('input') : [];
-					i = inputs.length;
+				if ( target.hasClass('nav-tab-link') ) {
+					panelId = /#(.*)$/.exec(e.target.href);
+					if ( panelId && panelId[1] )
+						panelId = panelId[1]
+					else
+						return false;
+						
+					wrapper = target.parents('.inside').first();
 
 					// upon changing tabs, we want to uncheck all checkboxes
-					while( i-- )
-						inputs[i].checked = false;
+					$('input', wrapper).removeAttr('checked');
+					
+					$('.tabs-panel-active', wrapper).removeClass('tabs-panel-active').addClass('tabs-panel-inactive');
+					$('#' + panelId, wrapper).removeClass('tabs-panel-inactive').addClass('tabs-panel-active');
 
-					$('.tabs-panel', wrapper).each(function() {
-						if ( this.className )
-							this.className = this.className.replace('tabs-panel-active', 'tabs-panel-inactive');
-					});
+					$('.tabs', wrapper).removeClass('tabs');
+					target.parent().addClass('tabs');
 
-					$('.tabs', wrapper).each(function() {
-						this.className = this.className.replace('tabs', '');
-					});
-
-					e.target.parentNode.className += ' tabs';
-
-					if ( panelIdMatch && panelIdMatch[1] ) {
-						activePanel = document.getElementById(panelIdMatch[1]);
-						if ( activePanel ) {
-							activePanel.className = activePanel.className.replace('tabs-panel-inactive', 'tabs-panel-active');
-						}
-					}
+					// select the search bar
+					$('.quick-search', wrapper).focus();
 
 					return false;
-				} else if ( e.target && e.target.className && -1 != e.target.className.indexOf('select-all') ) {
+				} else if ( target.hasClass('select-all') ) {
 					selectAreaMatch = /#(.*)$/.exec(e.target.href);
 					if ( selectAreaMatch && selectAreaMatch[1] ) {
 						items = $('#' + selectAreaMatch[1] + ' .tabs-panel-active .menu-item-title input');
@@ -594,37 +604,6 @@ var wpNavMenu;
 			});
 		},
 
-		/**
-		 * Set up quick-search input fields' events.
-		 *
-		 * @param object el The input element.
-		 */
-		setupQuickSearchEventListeners : function(el) {
-			var that = this;
-			$(el).autocomplete( ajaxurl + '?action=menu-quick-search&type=' + el.name,
-				{
-					delay: 500,
-					formatItem: api.formatAutocompleteResponse,
-					formatResult: api.formatAutocompleteResult,
-					minchars: 2,
-					multiple: false
-				}
-			).bind('blur', function(e) {
-				var changedData = api.autoCompleteData[this.value],
-				inputEl = this;
-				if ( changedData ) {
-					$.post(
-						ajaxurl + '?action=menu-quick-search&type=get-post-item&response-format=markup',
-						changedData,
-						function(r) {
-							that.processQuickSearchQueryResponse.call(that, r, changedData);
-							api.autoCompleteData[inputEl.value] = false;
-						}
-					);
-				}
-			});
-		},
-
 		eventOnClickEditLink : function(clickedEl) {
 			var activeEdit,
 			matchedSection = /#(.*)$/.exec(clickedEl.href);
@@ -650,6 +629,12 @@ var wpNavMenu;
 		eventOnClickCloseLink : function(clickedEl) {
 			$(clickedEl).closest('.menu-item-settings').siblings('dl').find('.item-edit').click();
 			return false;
+		},
+
+		eventOnClickMenuSave : function(clickedEl) {
+			// Update menu item position data
+			api.menuList.find('.menu-item-data-position').val( function(index) { return index + 1; } );
+			return true;
 		},
 
 		eventOnClickMenuDelete : function(clickedEl) {
@@ -695,59 +680,40 @@ var wpNavMenu;
 		 *
 		 * @param string resp The server response to the query.
 		 * @param object req The request arguments.
+		 * @param jQuery panel The tabs panel we're searching in.
 		 */
-		processQuickSearchQueryResponse : function(resp, req) {
-			if ( ! req )
-				req = {};
-			var wrap = document.createElement('ul'),
+		processQuickSearchQueryResponse : function(resp, req, panel) {
+			var i, matched, newID,
+			takenIDs = {},
 			form = document.getElementById('nav-menu-meta'),
-			i,
-			items,
-			matched,
-			message,
-			newID,
-			pattern = new RegExp('menu-item\\[(\[^\\]\]*)'),
-			resultList;
+			pattern = new RegExp('menu-item\\[(\[^\\]\]*)', 'g'),
+			items = resp.match(/<li>.*<\/li>/g);
 
-			// make a unique DB ID number
-			matched = pattern.exec(resp);
-			if ( matched && matched[1] ) {
-				newID = matched[1];
-				while( form.elements['menu-item[' + newID + '][menu-item-type]'] ) {
-					newID--;
-				}
-
-				if ( newID != matched[1] ) {
-					resp = resp.replace(new RegExp('menu-item\\[' + matched[1] + '\\]', 'g'), 'menu-item[' + newID + ']');
-				}
+			if( ! items ) {				
+				$('.categorychecklist', panel).html( '<li><p>' + navMenuL10n.noResultsFound + '</p></li>' );
+				$('img.waiting', panel).hide();
+				return;
 			}
 
-			wrap.innerHTML = resp;
+			i = items.length;
+			while( i-- ) {
+				// make a unique DB ID number
+				matched = pattern.exec(items[i]);
+				if ( matched && matched[1] ) {
+					newID = matched[1];
+					while( form.elements['menu-item[' + newID + '][menu-item-type]'] || takenIDs[ newID ] ) {
+						newID--;
+					}
 
-			items = wrap.getElementsByTagName('li');
-
-			if ( items[0] && req.object_type ) {
-				resultList = document.getElementById(req.object_type + '-search-checklist');
-				if ( resultList ) {
-					resultList.appendChild(items[0]);
-				}
-			} else if ( req.type ) {
-				matched = /quick-search-(posttype|taxonomy)-([a-zA-Z_-]*)/.exec(req.type);
-				if ( matched && matched[2] ) {
-					resultList = document.getElementById(matched[2] + '-search-checklist');
-					if ( resultList ) {
-						i = items.length;
-						if ( ! i ) {
-							message = document.createElement('li');
-							message.appendChild(document.createTextNode(navMenuL10n.noResultsFound));
-							resultList.appendChild(message);
-						}
-						while( i-- ) {
-							resultList.appendChild(items[i]);
-						}
+					takenIDs[newID] = true;
+					if ( newID != matched[1] ) {
+						items[i] = items[i].replace(new RegExp('menu-item\\[' + matched[1] + '\\]', 'g'), 'menu-item[' + newID + ']');
 					}
 				}
 			}
+
+			$('.categorychecklist', panel).html( items.join('') );
+			$('img.waiting', panel).hide();
 		},
 
 		removeMenuItem : function(el) {
@@ -758,35 +724,7 @@ var wpNavMenu;
 			el.addClass('deleting').fadeOut( 350 , function() {
 				el.remove();
 				children.shiftDepthClass(-1).updateParentMenuItemDBId();
-				api.recalculateMenuItemPositions();
-				that.checkForEmptyMenu();
 			});
-		},
-	
-		checkForEmptyMenu : function() {
-			if( api.menuList.children().length ) return;
-			api.menuList.height(80).one('sortstop', function(){
-				$(this).height('auto');
-			});
-		},
-		
-		formatAutocompleteResponse : function( resultRow, pos, total, queryTerm ) {
-			if ( resultRow && resultRow[0] ) {
-				var data = $.parseJSON(resultRow[0]);
-				if ( data.post_title ) {
-					if ( data.ID && data.post_type )
-						api.autoCompleteData[data.post_title] = {ID: data.ID, object_type: data.post_type};
-					return data.post_title;
-				}
-			}
-		},
-
-		formatAutocompleteResult : function( resultRow, pos, total, queryTerm ) {
-			if ( resultRow && resultRow[0] ) {
-				var data = $.parseJSON(resultRow[0]);
-				if ( data.post_title )
-					return data.post_title;
-			}
 		},
 
 		getListDataFromID : function(menuItemID, parentEl) {
@@ -800,7 +738,6 @@ var wpNavMenu;
 				'menu-item-parent-id',
 				'menu-item-position',
 				'menu-item-type',
-				'menu-item-append',
 				'menu-item-title',
 				'menu-item-url',
 				'menu-item-description',
@@ -828,10 +765,6 @@ var wpNavMenu;
 			}
 
 			return itemData;
-		},
-
-		recalculateMenuItemPositions : function() {
-			api.menuList.find('.menu-item-data-position').val( function(index) { return index + 1; } );
 		},
 
 		depthToPx : function(depth) {

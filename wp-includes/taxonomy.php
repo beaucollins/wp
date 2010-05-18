@@ -18,8 +18,6 @@ function create_initial_taxonomies() {
 	register_taxonomy( 'category', 'post', array(
 		'hierarchical' => true,
 	 	'update_count_callback' => '_update_post_term_count',
-		'label' => __( 'Categories' ),
-		'singular_label' => __( 'Category' ),
 		'query_var' => false,
 		'rewrite' => false,
 		'public' => true,
@@ -30,8 +28,6 @@ function create_initial_taxonomies() {
 	register_taxonomy( 'post_tag', 'post', array(
 	 	'hierarchical' => false,
 		'update_count_callback' => '_update_post_term_count',
-		'label' => __( 'Post Tags' ),
-		'singular_label' => __( 'Post Tag' ),
 		'query_var' => false,
 		'rewrite' => false,
 		'public' => true,
@@ -41,8 +37,10 @@ function create_initial_taxonomies() {
 
 	register_taxonomy( 'nav_menu', 'nav_menu_item', array(
 		'hierarchical' => false,
-		'label' => __( 'Navigation Menus' ),
-		'singular_label' => __( 'Navigation Menu' ),
+		'labels' => array(
+			'name' => __( 'Navigation Menus' ),
+			'singular_name' => __( 'Navigation Menu' ),
+		),
 		'query_var' => false,
 		'rewrite' => false,
 		'show_ui' => false,
@@ -51,7 +49,10 @@ function create_initial_taxonomies() {
 
 	register_taxonomy( 'link_category', 'link', array(
 		'hierarchical' => false,
-	  	'label' => __( 'Categories' ),
+		'labels' => array(
+			'name' => __( 'Categories' ),
+			'singular_name' => __( 'Category' ),
+		),
 		'query_var' => false,
 		'rewrite' => false,
 		'public' => false,
@@ -209,6 +210,8 @@ function is_taxonomy_hierarchical($taxonomy) {
  * whether taxonomy exists.
  *
  * Optional $args contents:
+ * 
+ * label - Name of the taxonomy shown in the menu. Usually plural. If not set, labels['name'] will be used.
  *
  * hierarchical - has some defined purpose at other parts of the API and is a
  * boolean value.
@@ -230,6 +233,8 @@ function is_taxonomy_hierarchical($taxonomy) {
  *
  * show_tagcloud - false to prevent the taxonomy being listed in the Tag Cloud Widget;
  * defaults to show_ui which defalts to public.
+ * 
+ * labels - An array of labels for this taxonomy. You can see accepted values in {@link get_taxonomy_labels()}. By default tag labels are used for non-hierarchical types and category labels for hierarchical ones.
  *
  * @package WordPress
  * @subpackage Taxonomy
@@ -254,10 +259,11 @@ function register_taxonomy( $taxonomy, $object_type, $args = array() ) {
 						'query_var' => $taxonomy,
 						'public' => true,
 						'show_ui' => null,
-						'label' => null,
 						'show_tagcloud' => null,
-						'_builtin' => false
-						);
+						'_builtin' => false,
+						'labels' => array(),
+						'capabilities' => array(),
+					);
 	$args = wp_parse_args($args, $defaults);
 
 	if ( false !== $args['query_var'] && !empty($wp) ) {
@@ -282,25 +288,66 @@ function register_taxonomy( $taxonomy, $object_type, $args = array() ) {
 	if ( is_null($args['show_tagcloud']) )
 		$args['show_tagcloud'] = $args['show_ui'];
 
-	if ( is_null($args['label'] ) )
-		$args['label'] = $taxonomy;
-
-	foreach ( array('manage_cap', 'edit_cap', 'delete_cap') as $cap ) {
-		if ( empty($args[$cap]) )
-			$args[$cap] = 'manage_categories';
-	}
-	if ( empty($args['assign_cap']) )
-		$args['assign_cap'] = 'edit_posts';
-
-	if ( empty($args['singular_label']) )
-		$args['singular_label'] = $args['label'];
+	$default_caps = array(
+		'manage_terms' => 'manage_categories',
+		'edit_terms'   => 'manage_categories',
+		'delete_terms' => 'manage_categories',
+		'assign_terms' => 'edit_posts',
+	);
+	$args['cap'] = (object) array_merge( $default_caps, $args['capabilities'] );
+	unset( $args['capabilities'] );
 
 	$args['name'] = $taxonomy;
 	$args['object_type'] = (array) $object_type;
+
+	$args['labels'] = get_taxonomy_labels( (object) $args );
+	$args['label'] = $args['labels']->name;
+	
 	$wp_taxonomies[$taxonomy] = (object) $args;
 
 	// register callback handling for metabox
  	add_filter('wp_ajax_add-'.$taxonomy, '_wp_ajax_add_hierarchical_term');
+}
+
+/**
+ * Builds an object with all taxonomy labels out of a taxonomy object
+ * 
+ * Accepted keys of the label array in the taxonomy object:
+ * - name - general name for the taxonomy, usually plural. The same as and overriden by $tax->label. Default is Post Tags/Categories
+ * - singular_name - name for one object of this taxonomy. Default is Post Tag/Category
+ * - search_items - Default is Search Tags/Search Categories
+ * - popular_items - Default is Popular Tags/Popular Categories
+ * - all_items - Default is All Tags/All Categories
+ * - parent_item - This string isn't used on non-hierarchical taxonomies. In hierarchical ones the default is Parent Category
+ * - parent_item_colon - The same as <code>parent_item</code>, but with colon <code>:</code> in the end
+ * - edit_item - Default is Edit Tag/Edit Category
+ * - update_item - Default is Update Tag/Update Category
+ * - add_new_item - Default is Add New Tag/Add New Category
+ * - new_item_name - Default is New Tag Name/New Category Name
+ * 
+ * Above, the first default value is for non-hierarchical taxonomies (like tags) and the second one is for hierarchical taxonomies (like categories.)
+ * 
+ * @since 3.0.0
+ * @param object $tax Taxonomy object
+ * @return object object with all the labels as member variables
+ */
+
+function get_taxonomy_labels( $tax ) {
+	$nohier_vs_hier_defaults = array(
+		'name' => array( _x( 'Post Tags', 'taxonomy general name' ), _x( 'Categories', 'taxonomy general name' ) ),
+		'singular_name' => array( _x( 'Post Tag', 'taxonomy singular name' ), _x( 'Category', 'taxonomy singular name' ) ),
+		'search_items' => array( __( 'Search Tags' ), __( 'Search Categories' ) ),
+		'popular_items' => array( __( 'Popular Tags' ), __( 'Popular Category' ) ),
+		'all_items' => array( __( 'All Tags' ), __( 'All Categories' ) ),
+		'parent_item' => array( null, __( 'Parent Category' ) ),
+		'parent_item_colon' => array( null, __( 'Parent Category:' ) ),
+		'edit_item' => array( __( 'Edit Tag' ), __( 'Edit Category' ) ),
+		'update_item' => array( __( 'Update Tag' ), __( 'Update Category' ) ),
+		'add_new_item' => array( __( 'Add New Tag' ), __( 'Add New Category' ) ),
+		'new_item_name' => array( __( 'New Tag Name' ), __( 'New Category Name' ) ),
+	);
+
+	return _get_custom_object_labels( $tax, $nohier_vs_hier_defaults );
 }
 
 /**
@@ -523,8 +570,7 @@ function get_term_by($field, $value, $taxonomy, $output = OBJECT, $filter = 'raw
 		$value = stripslashes($value);
 		$field = 't.name';
 	} else {
-		$field = 't.term_id';
-		$value = (int) $value;
+		return get_term( (int) $value, $taxonomy, $output, $filter);
 	}
 
 	$term = $wpdb->get_row( $wpdb->prepare( "SELECT t.*, tt.* FROM $wpdb->terms AS t INNER JOIN $wpdb->term_taxonomy AS tt ON t.term_id = tt.term_id WHERE tt.taxonomy = %s AND $field = %s LIMIT 1", $taxonomy, $value) );
@@ -533,6 +579,8 @@ function get_term_by($field, $value, $taxonomy, $output = OBJECT, $filter = 'raw
 
 	wp_cache_add($term->term_id, $term, $taxonomy);
 
+	$term = apply_filters('get_term', $term, $taxonomy);
+	$term = apply_filters("get_$taxonomy", $term, $taxonomy);
 	$term = sanitize_term($term, $taxonomy, $filter);
 
 	if ( $output == OBJECT ) {
@@ -819,10 +867,17 @@ function &get_terms($taxonomies, $args = '') {
 		$orderby = 't.slug';
 	else if ( 'term_group' == $_orderby )
 		$orderby = 't.term_group';
+	else if ( 'none' == $_orderby )
+		$orderby = '';
 	elseif ( empty($_orderby) || 'id' == $_orderby )
 		$orderby = 't.term_id';
 
 	$orderby = apply_filters( 'get_terms_orderby', $orderby, $args );
+
+	if ( !empty($orderby) )
+		$orderby = "ORDER BY $orderby";
+	else
+		$order = '';
 
 	$where = '';
 	$inclusions = '';
@@ -916,11 +971,13 @@ function &get_terms($taxonomies, $args = '') {
  			$selects = array('t.term_id', 'tt.parent', 'tt.count', 't.name');
  			break;
  		case 'count':
+			$orderby = '';
+			$order = '';
  			$selects = array('COUNT(*)');
  	}
     $select_this = implode(', ', apply_filters( 'get_terms_fields', $selects, $args ));
 
-	$query = "SELECT $select_this FROM $wpdb->terms AS t INNER JOIN $wpdb->term_taxonomy AS tt ON t.term_id = tt.term_id WHERE tt.taxonomy IN ($in_taxonomies) $where ORDER BY $orderby $order $limit";
+	$query = "SELECT $select_this FROM $wpdb->terms AS t INNER JOIN $wpdb->term_taxonomy AS tt ON t.term_id = tt.term_id WHERE tt.taxonomy IN ($in_taxonomies) $where $orderby $order $limit";
 
 	if ( 'count' == $fields ) {
 		$term_count = $wpdb->get_var($query);
@@ -2599,6 +2656,3 @@ function is_object_in_taxonomy($object_type, $taxonomy) {
 
 	return false;
 }
-
-
-?>

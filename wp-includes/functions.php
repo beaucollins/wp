@@ -1178,7 +1178,7 @@ function do_enclose( $content, $post_ID ) {
 		if ( !in_array( $link_test, $post_links_temp[0] ) ) { // link no longer in post
 			$mid = $wpdb->get_col( $wpdb->prepare("SELECT meta_id FROM $wpdb->postmeta WHERE post_id = %d AND meta_key = 'enclosure' AND meta_value LIKE (%s)", $post_ID, $link_test . '%') );
 			do_action( 'delete_postmeta', $mid );
-			$wpdb->query( $wpdb->prepare("DELETE FROM $wpdb->postmeta WHERE post_id IN(%s)", implode( ',', $mid ) ) );
+			$wpdb->query( $wpdb->prepare("DELETE FROM $wpdb->postmeta WHERE meta_id IN(%s)", implode( ',', $mid ) ) );
 			do_action( 'deleted_postmeta', $mid );
 		}
 	}
@@ -2117,12 +2117,14 @@ function wp_upload_dir( $time = null ) {
 	$siteurl = get_option( 'siteurl' );
 	$upload_path = get_option( 'upload_path' );
 	$upload_path = trim($upload_path);
+	$main_override = false;
 	if ( empty($upload_path) ) {
 		$dir = WP_CONTENT_DIR . '/uploads';
 	} else {
 		$dir = $upload_path;
 		if ( 'wp-content/uploads' == $upload_path ) {
 			$dir = WP_CONTENT_DIR . '/uploads';
+			$main_override = defined( 'MULTISITE' ) && is_main_site();
 		} elseif ( 0 !== strpos($dir, ABSPATH) ) {
 			// $dir is absolute, $upload_path is (maybe) relative to ABSPATH
 			$dir = path_join( ABSPATH, $dir );
@@ -2136,12 +2138,12 @@ function wp_upload_dir( $time = null ) {
 			$url = trailingslashit( $siteurl ) . $upload_path;
 	}
 
-	if ( defined('UPLOADS') && ( WP_CONTENT_DIR . '/uploads' != ABSPATH . $upload_path ) && ( !isset( $switched ) || $switched === false ) ) {
+	if ( defined('UPLOADS') && ( !$main_override || WP_CONTENT_DIR . '/uploads' != ABSPATH . $upload_path ) && ( !isset( $switched ) || $switched === false ) ) {
 		$dir = ABSPATH . UPLOADS;
 		$url = trailingslashit( $siteurl ) . UPLOADS;
 	}
 
-	if ( is_multisite() && ( WP_CONTENT_DIR . '/uploads' != ABSPATH . $upload_path ) && ( !isset( $switched ) || $switched === false ) ) {
+	if ( is_multisite() && ( !$main_override || WP_CONTENT_DIR . '/uploads' != ABSPATH . $upload_path ) && ( !isset( $switched ) || $switched === false ) ) {
 		if ( defined( 'BLOGUPLOADDIR' ) )
 			$dir = untrailingslashit(BLOGUPLOADDIR);
 		$url = str_replace( UPLOADS, 'files', $url );
@@ -2360,6 +2362,74 @@ function wp_check_filetype( $filename, $mimes = null ) {
 	}
 
 	return compact( 'ext', 'type' );
+}
+
+/**
+ * Attempt to determine the real file type of a file.
+ * If unable to, the file name extension will be used to determine type.
+ *
+ * If it's determined that the extension does not match the file's real type,
+ * then the "proper_filename" value will be set with a proper filename and extension.
+ *
+ * Currently this function only supports validating images known to getimagesize().
+ *
+ * @since 3.0.0
+ *
+ * @param string $file Full path to the image.
+ * @param string $filename The filename of the image (may differ from $file due to $file being in a tmp directory)
+ * @param array $mimes Optional. Key is the file extension with value as the mime type.
+ * @return array Values for the extension, MIME, and either a corrected filename or false if original $filename is valid
+ */
+function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
+
+	$proper_filename = false;
+
+	// Do basic extension validation and MIME mapping
+	$wp_filetype = wp_check_filetype( $filename, $mimes );
+	extract( $wp_filetype );
+
+	// We can't do any further validation without a file to work with
+	if ( ! file_exists( $file ) )
+		return compact( 'ext', 'type', 'proper_filename' );
+
+	// We're able to validate images using GD
+	if ( $type && 0 === strpos( $type, 'image/' ) && function_exists('getimagesize') ) {
+
+		// Attempt to figure out what type of image it actually is
+		$imgstats = @getimagesize( $file );
+
+		// If getimagesize() knows what kind of image it really is and if the real MIME doesn't match the claimed MIME
+		if ( !empty($imgstats['mime']) && $imgstats['mime'] != $type ) {
+			// This is a simplified array of MIMEs that getimagesize() can detect and their extensions
+			// You shouldn't need to use this filter, but it's here just in case
+			$mime_to_ext = apply_filters( 'getimagesize_mimes_to_exts', array(
+				'image/jpeg' => 'jpg',
+				'image/png'  => 'png',
+				'image/gif'  => 'gif',
+				'image/bmp'  => 'bmp',
+				'image/tiff' => 'tif',
+			) );
+
+			// Replace whatever is after the last period in the filename with the correct extension
+			if ( ! empty( $mime_to_ext[ $imgstats['mime'] ] ) ) {
+				$filename_parts = explode( '.', $filename );
+				array_pop( $filename_parts );
+				$filename_parts[] = $mime_to_ext[ $imgstats['mime'] ];
+				$new_filename = implode( '.', $filename_parts );
+
+				if ( $new_filename != $filename )
+					$proper_filename = $new_filename; // Mark that it changed
+
+				// Redefine the extension / MIME
+				$wp_filetype = wp_check_filetype( $new_filename, $mimes );
+				extract( $wp_filetype );
+			}
+		}
+	}
+
+	// Let plugins try and validate other types of files
+	// Should return an array in the style of array( 'ext' => $ext, 'type' => $type, 'proper_filename' => $proper_filename )
+	return apply_filters( 'wp_check_filetype_and_ext', compact( 'ext', 'type', 'proper_filename' ), $file, $filename, $mimes );
 }
 
 /**
@@ -2974,7 +3044,7 @@ function wp_maybe_load_widgets() {
  */
 function wp_widgets_add_menu() {
 	global $submenu;
-	$submenu['themes.php'][7] = array( __( 'Widgets' ), 'switch_themes', 'widgets.php' );
+	$submenu['themes.php'][7] = array( __( 'Widgets' ), 'edit_theme_options', 'widgets.php' );
 	ksort( $submenu['themes.php'], SORT_NUMERIC );
 }
 
@@ -4128,6 +4198,7 @@ function _search_terms_tidy($t) {
  *
  * Useful for returning true to filters easily
  *
+ * @since 3.0.0
  * @see __return_false()
  * @return bool true
  */
@@ -4140,11 +4211,38 @@ function __return_true() {
  *
  * Useful for returning false to filters easily
  *
+ * @since 3.0.0
  * @see __return_true()
  * @return bool false
  */
 function __return_false() {
 	return false;
+}
+
+/**
+ * Returns 0
+ *
+ * Useful for returning 0 to filters easily
+ *
+ * @since 3.0.0
+ * @see __return_zero()
+ * @return int 0
+ */
+function __return_zero() {
+	return 0;
+}
+
+/**
+ * Returns an empty array
+ *
+ * Useful for returning an empty array to filters easily
+ *
+ * @since 3.0.0
+ * @see __return_zero()
+ * @return array Empty array
+ */
+function __return_empty_array() {
+	return array();
 }
 
 /**

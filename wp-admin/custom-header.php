@@ -61,10 +61,10 @@ class Custom_Image_Header {
 	 * @since 2.1.0
 	 */
 	function init() {
-		if ( ! current_user_can('switch_themes') )
+		if ( ! current_user_can('edit_theme_options') )
 			return;
 
-		$page = add_theme_page(__('Header'), __('Header'), 'switch_themes', 'custom-header', array(&$this, 'admin_page'));
+		$page = add_theme_page(__('Header'), __('Header'), 'edit_theme_options', 'custom-header', array(&$this, 'admin_page'));
 
 		add_action("admin_print_scripts-$page", array(&$this, 'js_includes'));
 		add_action("admin_print_styles-$page", array(&$this, 'css_includes'));
@@ -125,7 +125,7 @@ class Custom_Image_Header {
 	 * @since 2.6.0
 	 */
 	function take_action() {
-		if ( ! current_user_can('switch_themes') )
+		if ( ! current_user_can('edit_theme_options') )
 			return;
 
 		if ( isset( $_POST['textcolor'] ) ) {
@@ -416,7 +416,7 @@ endif;
 <div class="wrap">
 <h3><?php _e('Upload New Header Image'); ?></h3><p><?php _e('Here you can upload a custom header image to be shown at the top of your site instead of the default one. On the next screen you will be able to crop the image.'); ?> <?php printf(__('Images of exactly <strong>%1$d x %2$d pixels</strong> will be used as-is.'), HEADER_IMAGE_WIDTH, HEADER_IMAGE_HEIGHT); ?></p>
 
-<form enctype="multipart/form-data" id="uploadForm" method="POST" action="<?php echo esc_attr(add_query_arg('step', 2)) ?>">
+<form enctype="multipart/form-data" id="uploadForm" method="post" action="<?php echo esc_attr(add_query_arg('step', 2)) ?>">
 <label for="upload"><?php _e('Choose an image from your computer:'); ?></label><br /><input type="file" id="upload" name="import" />
 <input type="hidden" name="action" value="save" />
 <?php wp_nonce_field('custom-header') ?>
@@ -507,7 +507,7 @@ if ( !empty($this->default_headers) ) {
 
 <div class="wrap">
 
-<form method="POST" action="<?php echo esc_attr(add_query_arg('step', 3)) ?>">
+<form method="post" action="<?php echo esc_attr(add_query_arg('step', 3)) ?>">
 
 <p><?php _e('Choose the part of the image you want to use as your header.'); ?></p>
 <div id="testWrap" style="position: relative">
@@ -597,7 +597,7 @@ if ( !empty($this->default_headers) ) {
 	 * @since 2.1.0
 	 */
 	function admin_page() {
-		if ( ! current_user_can('switch_themes') )
+		if ( ! current_user_can('edit_theme_options') )
 			wp_die(__('You do not have permission to customize headers.'));
 		$step = $this->step();
 		if ( 1 == $step )

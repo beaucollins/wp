@@ -101,9 +101,9 @@ if ( isset($_REQUEST['doaction']) ||  isset($_REQUEST['doaction2']) || isset($_R
 }
 
 if ( $post_id )
-	$title = sprintf(__('Edit Comments on &#8220;%s&#8221;'), wp_html_excerpt(_draft_or_post_title($post_id), 50));
+	$title = sprintf(__('Comments on &#8220;%s&#8221;'), wp_html_excerpt(_draft_or_post_title($post_id), 50));
 else
-	$title = __('Edit Comments');
+	$title = __('Comments');
 
 require_once('./admin-header.php');
 
@@ -316,12 +316,12 @@ $page_links = paginate_links( array(
 <option value="approve"><?php _e('Approve'); ?></option>
 <?php endif; ?>
 <?php if ( 'all' == $comment_status || 'approved' == $comment_status || 'moderated' == $comment_status ): ?>
-<option value="spam"><?php echo _x('Mark as Spam', 'comment'); ?></option>
+<option value="spam"><?php _ex('Mark as Spam', 'comment'); ?></option>
 <?php endif; ?>
 <?php if ( 'trash' == $comment_status ): ?>
 <option value="untrash"><?php _e('Restore'); ?></option>
 <?php elseif ( 'spam' == $comment_status ): ?>
-<option value="unspam"><?php echo _x('Not Spam', 'comment'); ?></option>
+<option value="unspam"><?php _ex('Not Spam', 'comment'); ?></option>
 <?php endif; ?>
 <?php if ( 'trash' == $comment_status || 'spam' == $comment_status || !EMPTY_TRASH_DAYS ): ?>
 <option value="delete"><?php _e('Delete Permanently'); ?></option>
@@ -416,7 +416,7 @@ if ( $page_links )
 <option value="approve"><?php _e('Approve'); ?></option>
 <?php endif; ?>
 <?php if ( 'all' == $comment_status || 'approved' == $comment_status || 'moderated' == $comment_status ): ?>
-<option value="spam"><?php echo _x('Mark as Spam', 'comment'); ?></option>
+<option value="spam"><?php _ex('Mark as Spam', 'comment'); ?></option>
 <?php endif; ?>
 <?php if ( 'trash' == $comment_status ): ?>
 <option value="untrash"><?php _e('Restore'); ?></option>
@@ -424,7 +424,7 @@ if ( $page_links )
 <?php if ( 'trash' == $comment_status || 'spam' == $comment_status || !EMPTY_TRASH_DAYS ): ?>
 <option value="delete"><?php _e('Delete Permanently'); ?></option>
 <?php elseif ( 'spam' == $comment_status ): ?>
-<option value="unspam"><?php echo _x('Not Spam', 'comment'); ?></option>
+<option value="unspam"><?php _ex('Not Spam', 'comment'); ?></option>
 <?php else: ?>
 <option value="trash"><?php _e('Move to Trash'); ?></option>
 <?php endif; ?>

@@ -103,19 +103,22 @@ if ( !function_exists('get_userdata') ) :
 function get_userdata( $user_id ) {
 	global $wpdb;
 
-	$user_id = absint($user_id);
-	if ( $user_id == 0 )
+	if ( ! is_numeric( $user_id ) )
 		return false;
-
-	$user = wp_cache_get($user_id, 'users');
+		
+	$user_id = absint( $user_id );
+	if ( ! $user_id )
+		return false;
+	
+	$user = wp_cache_get( $user_id, 'users' );
 
 	if ( $user )
 		return $user;
 
-	if ( !$user = $wpdb->get_row($wpdb->prepare("SELECT * FROM $wpdb->users WHERE ID = %d LIMIT 1", $user_id)) )
+	if ( ! $user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE ID = %d LIMIT 1", $user_id ) ) )
 		return false;
 
-	_fill_user($user);
+	_fill_user( $user );
 
 	return $user;
 }
@@ -799,7 +802,7 @@ function auth_redirect() {
 
 	$redirect = ( strpos($_SERVER['REQUEST_URI'], '/options.php') && wp_get_referer() ) ? wp_get_referer() : $proto . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
 
-	$login_url = wp_login_url($redirect);
+	$login_url = wp_login_url($redirect, true);
 
 	wp_redirect($login_url);
 	exit();
